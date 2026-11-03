@@ -79,7 +79,7 @@ def ensure_credentials_interactive(console: Console, tts=None) -> Tuple[str, str
             f"1. Откройте в браузере: [bold cyan]{YANDEX_TOKEN_URL}[/bold cyan]\n"
             f"2. Авторизуйтесь и скопируйте полученный токен\n"
             f"3. Вставьте его ниже:",
-            title="🔑 Авторизация Яндекс.Музыки",
+            title="[Авторизация Яндекс.Музыки]",
             border_style="red"
         ))
         if tts:
@@ -99,7 +99,7 @@ def ensure_credentials_interactive(console: Console, tts=None) -> Tuple[str, str
                 u_name = test_client.me.account.full_name or test_client.me.account.login or "Пользователь"
                 save_env_var("YANDEX_MUSIC_TOKEN", val)
                 ym_token = val
-                console.print(f"[bold green]✓ Токен подтверждён! Пользователь: {u_name}[/bold green]\n")
+                console.print(f"[bold green][OK] Токен подтверждён! Пользователь: {u_name}[/bold green]\n")
                 if tts:
                     tts.say("Токен Яндекс Музыки успешно сохранён.")
                 break
@@ -117,7 +117,7 @@ def ensure_credentials_interactive(console: Console, tts=None) -> Tuple[str, str
             f"1. Откройте в браузере: [bold cyan]{GEMINI_KEY_URL}[/bold cyan]\n"
             f"2. Нажмите [bold white]'Create API Key'[/bold white] и скопируйте ключ\n"
             f"3. Вставьте его ниже (или нажмите Enter для работы только с оффлайн-парсером):",
-            title="🔑 Google AI Studio API Key",
+            title="[Google AI Studio API Key]",
             border_style="yellow"
         ))
         if tts:
@@ -131,7 +131,7 @@ def ensure_credentials_interactive(console: Console, tts=None) -> Tuple[str, str
         if val:
             save_env_var("GEMINI_API_KEY", val)
             gemini_key = val
-            console.print("[bold green]✓ Ключ Google AI Studio успешно сохранён![/bold green]\n")
+            console.print("[bold green][OK] Ключ Google AI Studio успешно сохранён![/bold green]\n")
             if tts:
                 tts.say("Ключ Google успешно сохранён.")
             break

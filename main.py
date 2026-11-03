@@ -37,7 +37,7 @@ from live_session import LiveSessionManager
 console = Console()
 
 def print_help(current_trigger: str):
-    table = Table(title="🎵 Доступные команды и примеры запросов", border_style="cyan")
+    table = Table(title="[Команды и примеры запросов]", border_style="cyan")
     table.add_column("Категория", style="bold yellow", width=18)
     table.add_column("Примеры промптов (голосом или текстом)", style="green")
     
@@ -112,9 +112,9 @@ def main():
     # 5. Обработчики голосового ввода
     def on_voice_status(status: str):
         if status == "RECORDING":
-            console.print("[bold red]🎙️  [Запись речи...][/bold red]")
+            console.print("[bold red][REC] [Запись речи...][/bold red]")
         elif status == "TRANSCRIBING":
-            console.print("[bold yellow]⏳ [Распознавание речи...][/bold yellow]")
+            console.print("[bold yellow][~] [Распознавание речи...][/bold yellow]")
 
     def on_speech_start():
         if player.is_playing:
@@ -165,7 +165,7 @@ def main():
     # Приветственный баннер
     active_v_name = AVAILABLE_VOICES.get(config.voice, {}).get("name", config.voice)
     banner_text = (
-        f"[bold cyan]🎵 Голосовой и текстовый ассистент Яндекс.Музыки[/bold cyan]\n"
+        f"[bold cyan]=== Голосовой и текстовый ассистент Яндекс.Музыки ===[/bold cyan]\n"
         f"Пользователь: [bold white]{service.user_name}[/bold white] | "
         f"Подписка Плюс: [bold green]{'Активна' if service.has_plus else 'Нет'}[/bold green] | "
         f"Громкость: [bold yellow]{player.volume}%[/bold yellow]\n"
@@ -182,7 +182,7 @@ def main():
         if was_playing:
             player.fade_out_pause(duration=0.5)
 
-        menu_table = Table(title="🎙️ Меню выбора голоса ассистента", border_style="magenta")
+        menu_table = Table(title="[Меню выбора голоса ассистента]", border_style="magenta")
         menu_table.add_column("№", style="bold cyan", width=4)
         menu_table.add_column("Голос", style="bold white", width=16)
         menu_table.add_column("Описание", style="yellow")
@@ -224,9 +224,9 @@ def main():
                     continue
 
                 if source == "VOICE":
-                    console.print(f"[bold magenta]🎤 [Голос]:[/bold magenta] [bold white]{original_text}[/bold white]")
+                    console.print(f"[bold magenta][Голос]:[/bold magenta] [bold white]{original_text}[/bold white]")
                 else:
-                    console.print(f"[bold cyan]⌨️ [Текст]:[/bold cyan] [bold white]{raw_input}[/bold white]")
+                    console.print(f"[bold cyan][Текст]:[/bold cyan] [bold white]{raw_input}[/bold white]")
 
                 parsed = CommandParser.parse_menu_response(raw_input)
                 m_action = parsed["action"]
@@ -235,7 +235,7 @@ def main():
                     chosen_id = parsed["voice"]
                     chosen_name = parsed["name"]
                     config.voice = chosen_id
-                    console.print(f"[bold green]✓ Голос успешно переключен на:[/bold green] [bold yellow]{chosen_name}[/bold yellow] ({chosen_id})")
+                    console.print(f"[bold green][OK] Голос успешно переключен на:[/bold green] [bold yellow]{chosen_name}[/bold yellow] ({chosen_id})")
                     tts.say(f"Голос изменён на {chosen_name}. Приятно познакомиться!", voice=chosen_id, pause_music=False)
                     menu_active = False
 
@@ -283,10 +283,10 @@ def main():
             try:
                 # Отображаем команду в терминале
                 if source == "VOICE":
-                    console.print(f"[bold magenta]🎤 [Голос]:[/bold magenta] [bold white]{raw_text}[/bold white]")
+                    console.print(f"[bold magenta][Голос]:[/bold magenta] [bold white]{raw_text}[/bold white]")
                     log_info(f"Получена голосовая команда: raw='{raw_text}', parsed='{cmd_text}'")
                 else:
-                    console.print(f"[bold cyan]⌨️ [Текст]:[/bold cyan] [bold white]{cmd_text}[/bold white]")
+                    console.print(f"[bold cyan][Текст]:[/bold cyan] [bold white]{cmd_text}[/bold white]")
                     log_info(f"Получена текстовая команда: '{cmd_text}'")
 
                 if cmd_text == "триггер_активирован":
@@ -310,7 +310,7 @@ def main():
                     answer = cmd.get("answer") or cmd.get("tts_response", "")
                     console.print(Panel(
                         f"[bold white]{answer}[/bold white]",
-                        title="💡 Ответ ассистента",
+                        title="[Ответ ассистента]",
                         border_style="yellow",
                         expand=False
                     ))
@@ -323,7 +323,7 @@ def main():
                 # Возобновление диалога при фразе «Морсик, подожди!»
                 elif action == "RESUME_LIVE_CHAT":
                     if LiveSessionManager.can_resume():
-                        console.print("[bold green]✓ Возобновляем Live-диалог с сохранённым контекстом![/bold green]")
+                        console.print("[bold green][OK] Возобновляем Live-диалог с сохранённым контекстом![/bold green]")
                         tts.say("Я тут, продолжаем!", pause_music=False)
                         run_live_dialog(resume_context=True)
                     else:
@@ -340,7 +340,7 @@ def main():
                 elif action == "SET_TRIGGER":
                     new_trig = cmd["new_trigger"]
                     config.trigger = new_trig
-                    console.print(f"[bold green]✓ Триггер успешно изменён на:[/bold green] [bold yellow]{new_trig}[/bold yellow]")
+                    console.print(f"[bold green][OK] Триггер успешно изменён на:[/bold green] [bold yellow]{new_trig}[/bold yellow]")
                     tts.say(f"Триггер изменён на {new_trig}", pause_music=False)
                     log_info(f"Триггер изменен на: {new_trig}")
 
@@ -355,7 +355,7 @@ def main():
                     new_v = cmd["voice"]
                     config.voice = new_v
                     v_name = AVAILABLE_VOICES.get(new_v, {}).get("name", new_v)
-                    console.print(f"[bold green]✓ Голос успешно изменён на:[/bold green] [bold yellow]{v_name}[/bold yellow] ({new_v})")
+                    console.print(f"[bold green][OK] Голос успешно изменён на:[/bold green] [bold yellow]{v_name}[/bold yellow] ({new_v})")
                     tts.say(f"Голос изменён на {v_name}", voice=new_v, pause_music=False)
                     log_info(f"Голос изменен на: {new_v}")
 
@@ -374,7 +374,7 @@ def main():
                         f"[bold cyan]Смена токена Яндекс.Музыки[/bold cyan]\n\n"
                         f"1. Получите токен по ссылке: [bold white]{YANDEX_TOKEN_URL}[/bold white]\n"
                         f"2. Вставьте его ниже (или напишите 'отмена'):",
-                        title="🔑 Яндекс.Музыка",
+                        title="[Яндекс.Музыка]",
                         border_style="cyan"
                     ))
                     voice_listener.set_force_command_mode(True)
@@ -389,7 +389,7 @@ def main():
                             service.user = new_client.me.account
                             service.user_name = service.user.full_name or service.user.login or "Пользователь"
                             service.has_plus = new_client.me.plus.has_plus if hasattr(new_client.me, 'plus') else True
-                            console.print(f"[bold green]✓ Токен Яндекс.Музыки обновлён! Пользователь: {service.user_name}[/bold green]")
+                            console.print(f"[bold green][OK] Токен Яндекс.Музыки обновлён! Пользователь: {service.user_name}[/bold green]")
                             tts.say("Токен Яндекс Музыки успешно обновлён.", pause_music=False)
                         else:
                             console.print("[yellow]Смена токена отменена.[/yellow]")
@@ -413,7 +413,7 @@ def main():
                         f"[bold yellow]Смена API-ключа Google AI Studio[/bold yellow]\n\n"
                         f"1. Получите ключ по ссылке: [bold white]{GEMINI_KEY_URL}[/bold white]\n"
                         f"2. Вставьте его ниже (или напишите 'отмена'):",
-                        title="🔑 Google AI Studio",
+                        title="[Google AI Studio]",
                         border_style="yellow"
                     ))
                     voice_listener.set_force_command_mode(True)
@@ -422,7 +422,7 @@ def main():
                         if new_key and new_key.lower() not in ["отмена", "cancel"]:
                             save_env_var("GEMINI_API_KEY", new_key)
                             nlu.api_key = new_key
-                            console.print("[bold green]✓ API-ключ Google AI Studio успешно обновлён![/bold green]")
+                            console.print("[bold green][OK] API-ключ Google AI Studio успешно обновлён![/bold green]")
                             tts.say("Ключ Google успешно обновлён.", pause_music=False)
                         else:
                             console.print("[yellow]Смена ключа отменена.[/yellow]")
@@ -471,11 +471,11 @@ def main():
                             remaining = restored.get("history_remaining", 0)
 
                             console.print(Panel(
-                                f"[bold green]✓ Восстановлено предыдущее состояние:[/bold green]\n"
+                                f"[bold green][OK] Восстановлено предыдущее состояние:[/bold green]\n"
                                 f"Источник: [bold cyan]{p_title}[/bold cyan]\n"
                                 f"Трек: [bold white]{t_desc}[/bold white] (№ {restored.get('index')} из {restored.get('total')})\n"
                                 f"[dim]В истории сохранено ещё {remaining} состояний[/dim]",
-                                title="↩ Отмена / Undo",
+                                title="[Отмена / Undo]",
                                 border_style="yellow",
                                 expand=False
                             ))
@@ -488,14 +488,14 @@ def main():
                 # Повтор отмененного действия (Redo)
                 elif action == "REDO":
                     if player.can_redo():
-                        console.print("[bold green]↪ Повтор действия (Redo)...[/bold green]")
+                        console.print("[bold green][Redo] Повтор действия...[/bold green]")
                         restored = player.redo_state()
                         if restored:
                             p_title = restored.get("playlist_title") or "следующую очередь"
                             artist = restored.get("artist_name") or ""
                             title = restored.get("track_title") or ""
                             t_desc = f"{artist} — {title}".strip(" —")
-                            console.print(f"[bold green]✓ Повторено:[/bold green] [bold white]{p_title}[/bold white] ({t_desc})")
+                            console.print(f"[bold green][OK] Повторено:[/bold green] [bold white]{p_title}[/bold white] ({t_desc})")
                             tts.say(f"Повторяю {p_title}: {t_desc}", pause_music=False)
                     else:
                         console.print("[yellow]Нет отменённых действий для повтора.[/yellow]")
@@ -508,7 +508,7 @@ def main():
                         console.print("[dim]История состояний пуста[/dim]")
                         tts.say("История состояний пуста", pause_music=False)
                     else:
-                        h_table = Table(title="📜 История воспроизведения (доступно для отмены)", border_style="yellow")
+                        h_table = Table(title="[История воспроизведения] (доступно для отмены)", border_style="yellow")
                         h_table.add_column("#", style="dim", width=4)
                         h_table.add_column("Источник / Плейлист", style="cyan")
                         h_table.add_column("Трек", style="bold white")
@@ -548,7 +548,7 @@ def main():
                             artist = restored.get("artist_name") or ""
                             title = restored.get("track_title") or ""
                             t_desc = f"{artist} — {title}".strip(" —")
-                            console.print(f"[bold green]✓ Возврат к предыдущему состоянию:[/bold green] [bold white]{p_title}[/bold white] ({t_desc})")
+                            console.print(f"[bold green][OK] Возврат к предыдущему состоянию:[/bold green] [bold white]{p_title}[/bold white] ({t_desc})")
                             tts.say(f"Возвращаю {p_title}: {t_desc}", pause_music=False)
                     else:
                         console.print("[dim]Это первый трек в очереди, предыдущих состояний нет[/dim]")
@@ -558,14 +558,14 @@ def main():
                 elif action == "SET_VOLUME":
                     new_vol = player.set_volume(cmd["value"])
                     config.volume = new_vol
-                    console.print(f"[yellow]🔊 Громкость: {new_vol}%[/yellow]")
+                    console.print(f"[yellow][Громкость]: {new_vol}%[/yellow]")
                     tts_text = cmd.get("tts_response") or f"Громкость {new_vol} процентов"
                     tts.say(tts_text, pause_music=False)
 
                 elif action == "CHANGE_VOLUME":
                     new_vol = player.change_volume(cmd["delta"])
                     config.volume = new_vol
-                    console.print(f"[yellow]🔊 Громкость: {new_vol}%[/yellow]")
+                    console.print(f"[yellow][Громкость]: {new_vol}%[/yellow]")
                     tts_text = cmd.get("tts_response") or f"Громкость {new_vol} процентов"
                     tts.say(tts_text, pause_music=False)
 
@@ -580,7 +580,7 @@ def main():
                             f"Альбом: {info['album']}\n"
                             f"Длительность: {info['duration']}\n"
                             f"Статус: [bold green]{state}[/bold green] | Громкость: [bold yellow]{player.volume}%[/bold yellow]",
-                            title="Информация о треке",
+                            title="[Информация о треке]",
                             border_style="blue",
                             expand=False
                         ))
@@ -598,7 +598,7 @@ def main():
                         console.print("[dim]Очередь воспроизведения пуста[/dim]")
                         tts.say("Очередь воспроизведения пуста", pause_music=False)
                     else:
-                        table = Table(title="Очередь воспроизведения", border_style="blue")
+                        table = Table(title="[Очередь воспроизведения]", border_style="blue")
                         table.add_column("#", style="dim", width=4)
                         table.add_column("Трек", style="bold white")
                         table.add_column("Исполнитель", style="cyan")
@@ -619,7 +619,7 @@ def main():
                     cur = player.current_track
                     if cur:
                         if service.like_track(cur.id):
-                            console.print(f"[bold red]❤️[/bold red] Трек [bold]{cur.title}[/bold] добавлен в любимые!")
+                            console.print(f"[bold red][+][/bold red] Трек [bold]{cur.title}[/bold] добавлен в любимые!")
                             tts.say("Добавлено в любимые", pause_music=False)
                         else:
                             console.print("[red]Не удалось поставить лайк[/red]")
@@ -630,7 +630,7 @@ def main():
                     cur = player.current_track
                     if cur:
                         if service.dislike_track(cur.id):
-                            console.print(f"💔 Трек [bold]{cur.title}[/bold] удален из любимых.")
+                            console.print(f"[-] Трек [bold]{cur.title}[/bold] удален из любимых.")
                             tts.say("Удалено из любимых, переключаю", pause_music=False)
                             player.next_track()
                         else:
@@ -640,7 +640,7 @@ def main():
 
                 # Моя волна
                 elif action == "PLAY_MY_WAVE":
-                    console.print("[bold cyan]🌊 Запускаем Мою волну...[/bold cyan]")
+                    console.print("[bold cyan][Моя волна] Запускаем Мою волну...[/bold cyan]")
                     tts_text = cmd.get("tts_response") or "Запускаю Мою волну"
                     tts.say(tts_text, pause_music=False)
                     tracks = service.get_my_wave_batch()
@@ -653,7 +653,7 @@ def main():
                 # Личные плейлисты пользователя
                 elif action == "PLAY_MY_PLAYLIST":
                     q = cmd.get("query", "")
-                    console.print("[bold green]📁 Загружаем ваш плейлист...[/bold green]")
+                    console.print("[bold green][Плейлист] Загружаем ваш плейлист...[/bold green]")
                     tracks, desc = service.search_user_playlist(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю ваш плейлист {desc}"
@@ -665,7 +665,7 @@ def main():
 
                 # Любимые треки
                 elif action == "PLAY_LIKED":
-                    console.print("[bold red]❤️ Загружаем любимые треки...[/bold red]")
+                    console.print("[bold red][Любимые] Загружаем любимые треки...[/bold red]")
                     tts_text = cmd.get("tts_response") or "Включаю любимые треки"
                     tts.say(tts_text, pause_music=False)
                     tracks, desc = service.get_liked_tracks()
@@ -678,7 +678,7 @@ def main():
                 # Персональные подборки Яндекса
                 elif action == "PLAY_EDITORIAL":
                     title = cmd["title"]
-                    console.print(f"[bold green]✨ Загружаем '{title}'...[/bold green]")
+                    console.print(f"[bold green][Подборка] Загружаем '{title}'...[/bold green]")
                     tts_text = cmd.get("tts_response") or f"Включаю {title}"
                     tts.say(tts_text, pause_music=False)
                     tracks, desc = service.get_generated_playlist(cmd["kind"])

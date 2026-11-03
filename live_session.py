@@ -122,7 +122,7 @@ class LiveSessionManager:
 
         voice_display = f"{self.selected_voice} (авто-пол под {self.config.voice})"
         banner = (
-            f"[bold cyan]🎙️ Live-диалог с Gemini 3.8 активирован[/bold cyan]\n"
+            f"[bold cyan][Live] Диалог с Gemini 3.8 активирован[/bold cyan]\n"
             f"Модель: [bold yellow]{self.model_name}[/bold yellow] | Голос: [bold magenta]{voice_display}[/bold magenta]\n"
             f"[dim]Говорите свободно без триггера. Для выхода скажите «положи трубку» или нажмите Esc[/dim]"
         )
@@ -391,7 +391,7 @@ class LiveSessionManager:
                                     log_warning(f"Ошибка транскрибации речи пользователя: {e}")
 
                             if user_text:
-                                self.console.print(f"\n[bold green]🎤 [Вы]:[/bold green] [white]{user_text}[/white]")
+                                self.console.print(f"\n[bold green][Вы]:[/bold green] [white]{user_text}[/white]")
                                 LiveSessionManager._last_history.append({"role": "user", "text": user_text})
                                 if len(LiveSessionManager._last_history) > 20:
                                     LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
@@ -401,7 +401,7 @@ class LiveSessionManager:
                                 # Мгновенный Fast-Path для команд плеера прямо во время разговора
                                 if any(w in u_lower for w in ["останови", "пауза", "стоп", "приостанови", "останую"]):
                                     self.player.pause()
-                                    self.console.print("\n[yellow]⏸ [Команда]: Музыка на паузе[/yellow]")
+                                    self.console.print("\n[yellow][Пауза] Музыка на паузе[/yellow]")
                                 elif any(w in u_lower for w in ["возобнови", "продолжи", "играй"]):
                                     self.player.resume()
                                     self.player.duck(True)
@@ -502,7 +502,7 @@ class LiveSessionManager:
                         if clean_t:
                             if not role_label_printed:
                                 token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
-                                self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="")
+                                self.console.print(f"\n[bold cyan][Морсик]:[/bold cyan] {token_str} ", end="")
                                 role_label_printed = True
                             self.console.print(f"[white]{clean_t}[/white]", end="")
                             try:
@@ -554,45 +554,45 @@ class LiveSessionManager:
         if name == "set_volume":
             lvl = int(args.get("level", 50))
             new_v = self.player.set_volume(lvl)
-            self.console.print(f"\n[yellow]🔊 [Команда]: Громкость {new_v}%[/yellow]")
+            self.console.print(f"\n[yellow][Громкость]: {new_v}%[/yellow]")
             return {"status": "success", "new_volume": new_v}
 
         elif name == "change_volume":
             delta = int(args.get("delta", 10))
             new_v = self.player.change_volume(delta)
-            self.console.print(f"\n[yellow]🔊 [Команда]: Громкость {new_v}%[/yellow]")
+            self.console.print(f"\n[yellow][Громкость]: {new_v}%[/yellow]")
             return {"status": "success", "new_volume": new_v}
 
         elif name == "pause_music":
             self.player.pause()
-            self.console.print("\n[yellow]⏸ [Команда]: Музыка на паузе[/yellow]")
+            self.console.print("\n[yellow][Пауза] Музыка на паузе[/yellow]")
             return {"status": "paused"}
 
         elif name == "resume_music":
             self.player.resume()
             self.player.duck(True)
-            self.console.print("\n[green]▶ [Команда]: Музыка возобновлена[/green]")
+            self.console.print("\n[green][Воспроизведение] Музыка возобновлена[/green]")
             return {"status": "playing"}
 
         elif name == "next_track":
             ok = self.player.next_track()
             cur = self.player.current_track
             info = self.service.format_track_info(cur) if cur else {}
-            self.console.print(f"\n[cyan]⏭ [Команда]: Следующий трек: {info.get('artists')} — {info.get('title')}[/cyan]")
+            self.console.print(f"\n[cyan][Следующий трек]: {info.get('artists')} — {info.get('title')}[/cyan]")
             return {"status": "success", "now_playing": f"{info.get('artists')} — {info.get('title')}"}
 
         elif name == "prev_track":
             self.player.prev_track()
             cur = self.player.current_track
             info = self.service.format_track_info(cur) if cur else {}
-            self.console.print(f"\n[cyan]⏮ [Команда]: Предыдущий трек: {info.get('artists')} — {info.get('title')}[/cyan]")
+            self.console.print(f"\n[cyan][Предыдущий трек]: {info.get('artists')} — {info.get('title')}[/cyan]")
             return {"status": "success", "now_playing": f"{info.get('artists')} — {info.get('title')}"}
 
         elif name == "like_current_track":
             cur = self.player.current_track
             if cur:
                 self.service.like_track(cur.id)
-                self.console.print(f"\n[red]❤️ [Команда]: Трек {cur.title} добавлен в любимые[/red]")
+                self.console.print(f"\n[red][+] Трек {cur.title} добавлен в любимые[/red]")
                 return {"status": "liked", "track": cur.title}
             return {"status": "error", "message": "Nothing playing"}
 
@@ -603,7 +603,7 @@ class LiveSessionManager:
                 self.player.duck(True)
                 cur = self.player.current_track
                 info = self.service.format_track_info(cur) if cur else {}
-                self.console.print(f"\n[green]🎵 [Команда]: Включаем Мою волну[/green]")
+                self.console.print(f"\n[green][Моя волна] Включаем Мою волну[/green]")
                 return {
                     "status": "success",
                     "description": "Моя волна",
@@ -620,7 +620,7 @@ class LiveSessionManager:
                 self.player.duck(True)
                 cur = self.player.current_track
                 info = self.service.format_track_info(cur) if cur else {}
-                self.console.print(f"\n[green]🎵 [Команда]: Включаем {desc}[/green]")
+                self.console.print(f"\n[green][Музыка] Включаем {desc}[/green]")
                 return {
                     "status": "success",
                     "description": desc,
@@ -639,7 +639,7 @@ class LiveSessionManager:
                 self.player.duck(True)
                 cur = self.player.current_track
                 info = self.service.format_track_info(cur) if cur else {}
-                self.console.print(f"\n[green]🎵 [Команда]: Включаем {desc}[/green]")
+                self.console.print(f"\n[green][Музыка] Включаем {desc}[/green]")
                 return {
                     "status": "success",
                     "description": desc,
@@ -666,7 +666,7 @@ class LiveSessionManager:
 
         elif name == "web_search":
             q = args.get("query", "")
-            self.console.print(f"\n[bold yellow]🔍 [Поиск в интернете]: {q}...[/bold yellow]")
+            self.console.print(f"\n[bold yellow][Поиск]: {q}...[/bold yellow]")
             search_res = await asyncio.to_thread(self.search_service.search, q)
             return {"search_results": search_res}
 

@@ -186,6 +186,7 @@ class TTSEngine:
         if hasattr(self.config, "tts_enabled") and not self.config.tts_enabled:
             return
 
+        was_playing = False
         try:
             audio_np = self.synthesize(text, voice=voice)
             if audio_np is None:
@@ -222,10 +223,10 @@ class TTSEngine:
                     pass
 
             # Возврат звука после воспроизведения ответа
-            if self.player:
-                if pause_music and was_playing:
+            if self.player and was_playing:
+                if pause_music:
                     self.player.fade_in_resume(duration=0.5)
-                elif not pause_music and was_playing:
+                else:
                     self.player.duck(False)
 
     def close(self):
