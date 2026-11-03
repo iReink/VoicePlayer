@@ -313,8 +313,10 @@ class MusicPlayer:
         """Поставить на паузу"""
         with self._lock:
             if not self._is_stopped and not self._is_paused:
+                self._is_ducked = False
                 pygame.mixer.music.pause()
                 self._is_paused = True
+                pygame.mixer.music.set_volume(self._volume)
                 return True
             return False
 
@@ -322,6 +324,8 @@ class MusicPlayer:
         """Возобновить воспроизведение"""
         with self._lock:
             if not self._is_stopped and self._is_paused:
+                self._is_ducked = False
+                pygame.mixer.music.set_volume(self._volume)
                 pygame.mixer.music.unpause()
                 self._is_paused = False
                 return True
@@ -342,7 +346,9 @@ class MusicPlayer:
             self._is_stopped = True
             self._is_paused = False
             self._is_loading = False
+            self._is_ducked = False
             pygame.mixer.music.stop()
+            pygame.mixer.music.set_volume(self._volume)
             self._current_stream = None
 
     def next_track(self) -> bool:
@@ -384,16 +390,38 @@ class MusicPlayer:
         self._play_current()
         return True
 
+    def _fade_volume(self, from_vol: float, to_vol: float, duration: float = 0.15):
+        """Плавное скольжение громкости в отдельном потоке (без блокировки)"""
+        def _worker():
+            steps = 6
+            step_time = max(0.01, duration / steps)
+            for i in range(1, steps + 1):
+                cur_v = from_vol + (to_vol - from_vol) * (i / steps)
+                try:
+                    pygame.mixer.music.set_volume(max(0.0, min(1.0, cur_v)))
+                except Exception:
+                    break
+                time.sleep(step_time)
+            try:
+                pygame.mixer.music.set_volume(max(0.0, min(1.0, to_vol)))
+            except Exception:
+                pass
+        threading.Thread(target=_worker, daemon=True).start()
+
     def duck(self, enable: bool):
-        """Временное приглушение музыки во время ответа ассистента"""
+        """Плавное приглушение музыки во время ответа ассистента"""
         with self._lock:
-            if enable and not self._is_ducked:
-                self._is_ducked = True
-                self._saved_volume = self._volume
-                pygame.mixer.music.set_volume(min(self._volume, 0.15))
-            elif not enable and self._is_ducked:
-                self._is_ducked = False
-                pygame.mixer.music.set_volume(self._saved_volume)
+            if enable:
+                if not self._is_ducked and not self._is_paused and not self._is_stopped:
+                    self._is_ducked = True
+                    self._saved_volume = self._volume
+                    target_v = min(self._volume * 0.35, 0.15)
+                    self._fade_volume(pygame.mixer.music.get_volume(), target_v, duration=0.15)
+            else:
+                if self._is_ducked:
+                    self._is_ducked = False
+                    target_v = self._volume
+                    self._fade_volume(pygame.mixer.music.get_volume(), target_v, duration=0.20)
 
     def fade_out_pause(self, duration: float = 0.5) -> bool:
         """
@@ -467,6 +495,7 @@ class MusicPlayer:
         percent = max(0, min(100, percent))
         self._volume = percent / 100.0
         with self._lock:
+            self._is_ducked = False
             pygame.mixer.music.set_volume(self._volume)
         return percent
 

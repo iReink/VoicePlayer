@@ -231,9 +231,13 @@ class LiveSessionManager:
             LiveSessionManager._last_session_time = time.time()
             log_info("Live-сессия завершена")
 
-            # Плавно возобновляем музыку с того же места
-            if was_playing and self.player:
-                self.player.fade_in_resume(duration=0.5)
+            # Плавно возобновляем музыку с того же места или снимаем дакинг
+            if self.player:
+                if self.player.is_playing:
+                    self.player.duck(False)
+                elif was_playing and self.player.is_paused:
+                    self.player.duck(False)
+                    self.player.fade_in_resume(duration=0.5)
             
             self.console.print("[dim]Выход из Live-режима. Ассистент снова слушает обычные команды.[/dim]\n")
 
@@ -418,6 +422,24 @@ class LiveSessionManager:
                                 elif any(w in u_lower for w in ["хватит", "положи трубку", "прекратить разговор", "отбой", "пока"]):
                                     self.console.print("\n[yellow]Завершение диалога по просьбе пользователя...[/yellow]")
                                     self.should_exit = True
+                                elif any(w in u_lower for w in ["смени голос", "поменяй голос", "другой голос", "сменить голос"]):
+                                    new_v_id = None
+                                    if any(w in u_lower for w in ["айдар", "мужск", "парень", "баритон"]):
+                                        new_v_id = "aidar"
+                                    elif any(w in u_lower for w in ["евгений", "женя"]):
+                                        new_v_id = "eugene"
+                                    elif any(w in u_lower for w in ["бая"]):
+                                        new_v_id = "baya"
+                                    elif any(w in u_lower for w in ["ксения", "женск", "девушк"]):
+                                        new_v_id = "xenia"
+                                    else:
+                                        cur_v = self.config.voice.lower()
+                                        new_v_id = "aidar" if cur_v in ["xenia", "baya"] else "xenia"
+
+                                    if new_v_id:
+                                        self.config.voice = new_v_id
+                                        v_name = AVAILABLE_VOICES.get(new_v_id, {}).get("name", new_v_id)
+                                        self.console.print(f"\n[green][OK] Голос ассистента изменён на: {v_name} ({new_v_id})[/green]")
 
                                 # Передаем чистый транскрибированный текст в Gemini в clientContent
                                 turn_msg = {
@@ -674,6 +696,25 @@ class LiveSessionManager:
             self.should_exit = True
             return {"status": "conversation_ended"}
 
+        elif name == "change_voice":
+            v_arg = args.get("voice_name", "").lower()
+            chosen_id = None
+            if any(w in v_arg for w in ["айдар", "aidar", "мужск"]):
+                chosen_id = "aidar"
+            elif any(w in v_arg for w in ["евгений", "eugene"]):
+                chosen_id = "eugene"
+            elif any(w in v_arg for w in ["бая", "baya"]):
+                chosen_id = "baya"
+            elif any(w in v_arg for w in ["ксения", "xenia", "женск"]):
+                chosen_id = "xenia"
+
+            if chosen_id:
+                self.config.voice = chosen_id
+                v_name = AVAILABLE_VOICES.get(chosen_id, {}).get("name", chosen_id)
+                self.console.print(f"\n[green][OK] Голос ассистента изменён на: {v_name}[/green]")
+                return {"status": "success", "voice": v_name, "message": f"Голос переключен на {v_name}."}
+            return {"status": "error", "message": "Доступны голоса: Ксения, Айдар, Бая, Евгений."}
+
         return {"status": "unknown_function"}
 
     def _build_setup_message(self, resume_context: bool = False) -> Dict[str, Any]:
@@ -795,6 +836,17 @@ class LiveSessionManager:
                 "name": "end_conversation",
                 "description": "Завершить разговор и закрыть сессию диалога",
                 "parameters": {"type": "OBJECT", "properties": {}}
+            },
+            {
+                "name": "change_voice",
+                "description": "Сменить голос ассистента на мужской или женский (Ксения, Айдар, Бая, Евгений)",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "voice_name": {"type": "STRING", "description": "Имя голоса: 'xenia' (Ксения), 'aidar' (Айдар), 'baya' (Бая), 'eugene' (Евгений)"}
+                    },
+                    "required": ["voice_name"]
+                }
             }
         ]
 

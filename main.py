@@ -125,10 +125,8 @@ def main():
         pass
 
     def on_voice_command(cmd_text: str, raw_text: str):
-        # Только когда Whisper действительно распознал фразу с триггером («Морсик») —
-        # приглушаем музыку для комфортного выполнения команды и ответа
-        if player.is_playing:
-            player.duck(True)
+        # Дакинг выполняется непосредственно в tts.say при ответе,
+        # чтобы музыка не приглушалась вхолостую при паузах, остановках и меню
         cmd_queue.put(("VOICE", cmd_text, raw_text))
 
     def on_voice_log(msg: str):
