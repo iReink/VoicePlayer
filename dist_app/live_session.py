@@ -395,91 +395,101 @@ class LiveSessionManager:
             try:
                 msg_raw = await ws.recv()
                 data = json.loads(msg_raw)
-            except Exception:
+            except websockets.exceptions.ConnectionClosed:
+                break
+            except Exception as e:
+                log_warning(f"Соединение Live API закрыто: {e}")
                 break
 
-            # 1. Отслеживание расхода токенов (скользящее окно 20 000)
-            meta = data.get("usageMetadata", {})
-            if meta:
-                total = meta.get("totalTokenCount", 0)
-                if total:
-                    self.tokens_used = total
-                    if total >= self.max_tokens:
-                        log_warning(f"Достигнут предел скользящего окна токенов: {total}/{self.max_tokens}")
+            try:
+                # 1. Отслеживание расхода токенов (скользящее окно 20 000)
+                meta = data.get("usageMetadata", {})
+                if meta:
+                    total = meta.get("totalTokenCount", 0)
+                    if total:
+                        self.tokens_used = total
+                        if total >= self.max_tokens:
+                            log_warning(f"Достигнут предел скользящего окна токенов: {total}/{self.max_tokens}")
 
-            # 2. Обработка контента от сервера
-            server_content = data.get("serverContent", {})
-            if server_content:
-                # Проверка перебивания со стороны Gemini
-                if server_content.get("interrupted"):
-                    while not self.audio_out_queue.empty():
+                # 2. Обработка контента от сервера
+                server_content = data.get("serverContent", {})
+                if server_content:
+                    # Проверка перебивания со стороны Gemini
+                    if server_content.get("interrupted"):
+                        while not self.audio_out_queue.empty():
+                            try:
+                                self.audio_out_queue.get_nowait()
+                            except Exception:
+                                break
+                        self.is_assistant_speaking = False
+                        if role_label_printed:
+                            self.console.print(" [dim yellow][перебито][/dim yellow]")
+                            role_label_printed = False
+                            current_ai_text.clear()
+
+                    model_turn = server_content.get("modelTurn", {})
+                    parts = model_turn.get("parts", [])
+                    for part in parts:
+                        # Входящий звук (24kHz PCM)
+                        if "inlineData" in part:
+                            b64_bytes = part["inlineData"].get("data", "")
+                            if b64_bytes:
+                                raw_audio = base64.b64decode(b64_bytes)
+                                self.audio_out_queue.put(raw_audio)
+                                self.is_assistant_speaking = True
+
+                    # Входящий текст транскрибации ответа ассистента
+                    out_tr = server_content.get("outputTranscription", {})
+                    if out_tr and "text" in out_tr:
+                        t = out_tr["text"]
+                        if not role_label_printed:
+                            token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
+                            self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="")
+                            role_label_printed = True
+                        self.console.print(f"[white]{t}[/white]", end="")
                         try:
-                            self.audio_out_queue.get_nowait()
+                            sys.stdout.flush()
                         except Exception:
-                            break
-                    self.is_assistant_speaking = False
-                    if role_label_printed:
-                        self.console.print(" [dim yellow][перебито][/dim yellow]")
-                        role_label_printed = False
-                        current_ai_text.clear()
+                            pass
+                        current_ai_text.append(t)
 
-                model_turn = server_content.get("modelTurn", {})
-                parts = model_turn.get("parts", [])
-                for part in parts:
-                    # Входящий звук (24kHz PCM)
-                    if "inlineData" in part:
-                        b64_bytes = part["inlineData"].get("data", "")
-                        if b64_bytes:
-                            raw_audio = base64.b64decode(b64_bytes)
-                            self.audio_out_queue.put(raw_audio)
-                            self.is_assistant_speaking = True
+                    if server_content.get("turnComplete"):
+                        if role_label_printed:
+                            self.console.print()
+                            full_turn_text = "".join(current_ai_text).strip()
+                            if full_turn_text:
+                                LiveSessionManager._last_history.append({"role": "assistant", "text": full_turn_text})
+                                if len(LiveSessionManager._last_history) > 20:
+                                    LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
+                            role_label_printed = False
+                            current_ai_text.clear()
 
-                # Входящий текст транскрибации ответа ассистента
-                out_tr = server_content.get("outputTranscription", {})
-                if out_tr and "text" in out_tr:
-                    t = out_tr["text"]
-                    if not role_label_printed:
-                        token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
-                        self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="", flush=True)
-                        role_label_printed = True
-                    self.console.print(f"[white]{t}[/white]", end="", flush=True)
-                    current_ai_text.append(t)
+                # 3. Обработка Function Calling (вызовы команд плеера и поиска)
+                tool_call = data.get("toolCall", {})
+                if tool_call:
+                    calls = tool_call.get("functionCalls", [])
+                    responses = []
 
-                if server_content.get("turnComplete"):
-                    if role_label_printed:
-                        self.console.print()
-                        full_turn_text = "".join(current_ai_text).strip()
-                        if full_turn_text:
-                            LiveSessionManager._last_history.append({"role": "assistant", "text": full_turn_text})
-                            if len(LiveSessionManager._last_history) > 20:
-                                LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
-                        role_label_printed = False
-                        current_ai_text.clear()
+                    for fc in calls:
+                        call_id = fc.get("id")
+                        name = fc.get("name")
+                        args = fc.get("args", {})
+                        log_info(f"Live ToolCall: {name}({args})")
 
-            # 3. Обработка Function Calling (вызовы команд плеера и поиска)
-            tool_call = data.get("toolCall", {})
-            if tool_call:
-                calls = tool_call.get("functionCalls", [])
-                responses = []
+                        res_output = await self._execute_tool(name, args)
+                        responses.append({
+                            "response": {"output": res_output},
+                            "id": call_id
+                        })
 
-                for fc in calls:
-                    call_id = fc.get("id")
-                    name = fc.get("name")
-                    args = fc.get("args", {})
-                    log_info(f"Live ToolCall: {name}({args})")
-
-                    res_output = await self._execute_tool(name, args)
-                    responses.append({
-                        "response": {"output": res_output},
-                        "id": call_id
-                    })
-
-                tool_resp = {
-                    "toolResponse": {
-                        "functionResponses": responses
+                    tool_resp = {
+                        "toolResponse": {
+                            "functionResponses": responses
+                        }
                     }
-                }
-                await ws.send(json.dumps(tool_resp))
+                    await ws.send(json.dumps(tool_resp))
+            except Exception as e:
+                log_error(f"Исключение при обработке пакета Live API: {e}")
 
     async def _execute_tool(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         """Исполнение вызова инструмента на локальном плеере или сервисе поиска"""
