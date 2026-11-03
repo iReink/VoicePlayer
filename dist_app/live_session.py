@@ -12,7 +12,8 @@ import math
 import struct
 import threading
 import queue
-from typing import Optional, Dict, Any, List, Callable
+import collections
+from typing import Optional, Dict, Any, List
 
 if sys.platform == "win32":
     try:
@@ -22,6 +23,7 @@ if sys.platform == "win32":
         pass
 
 import sounddevice as sd
+import numpy as np
 import websockets
 from rich.console import Console
 from rich.panel import Panel
@@ -42,12 +44,19 @@ class LiveSessionManager:
     # Сохранённая история для возобновления при «Морсик, подожди!»
     _last_history: List[Dict[str, Any]] = []
     _last_session_time: float = 0.0
-    _grace_period_active: bool = False
 
-    def __init__(self, config_manager, player, music_service, console: Optional[Console] = None):
+    def __init__(
+        self,
+        config_manager,
+        player,
+        music_service,
+        whisper_model=None,
+        console: Optional[Console] = None
+    ):
         self.config = config_manager
         self.player = player
         self.service = music_service
+        self.whisper_model = whisper_model
         self.console = console or Console()
         self.search_service = SearchService()
 
@@ -120,8 +129,11 @@ class LiveSessionManager:
 
         uri = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={self.api_key}"
 
+        # Небольшая пауза, чтобы VoiceListener освободил микрофон
+        await asyncio.sleep(0.15)
+
         try:
-            async with websockets.connect(uri, max_size=10*1024*1024) as ws:
+            async with websockets.connect(uri, max_size=10*1024*1024, close_timeout=3.0) as ws:
                 # 1. Отправка Setup сообщения
                 setup_msg = self._build_setup_message(resume_context=resume_context)
                 await ws.send(json.dumps(setup_msg))
@@ -133,7 +145,41 @@ class LiveSessionManager:
 
                 log_info("Gemini Live API WebSocket соединение успешно установлено")
 
-                # 2. Инициализация аудиовывода (24kHz Mono 16-bit PCM)
+                # 2. Приветственный триггер, чтобы Gemini сразу поздоровалась вслух
+                greeting_text = (
+                    "Привет! Я вернулся, продолжаем разговор с того места, где остановились."
+                    if resume_context and LiveSessionManager._last_history
+                    else "Привет! Я включил голосовой режим разговора. Кратко поздоровайся со мной в одно ёмкое предложение и спроси, о чём поговорим."
+                )
+                init_prompt = {
+                    "clientContent": {
+                        "turns": [{
+                            "role": "user",
+                            "parts": [{"text": greeting_text}]
+                        }],
+                        "turnComplete": True
+                    }
+                }
+                await ws.send(json.dumps(init_prompt))
+
+                # 3. Фоновый мониторинг клавиши Esc на Windows
+                if sys.platform == "win32":
+                    import msvcrt
+                    def _esc_worker():
+                        while self.is_running and not self.should_exit:
+                            try:
+                                if msvcrt.kbhit():
+                                    ch = msvcrt.getch()
+                                    if ch == b'\x1b':  # ESC
+                                        self.console.print("\n[yellow]Нажата клавиша Esc. Завершение Live-диалога...[/yellow]")
+                                        self.should_exit = True
+                                        break
+                            except Exception:
+                                pass
+                            time.sleep(0.05)
+                    threading.Thread(target=_esc_worker, daemon=True).start()
+
+                # 4. Инициализация аудиовывода (24kHz Mono 16-bit PCM)
                 self.output_stream = sd.RawOutputStream(
                     samplerate=24000,
                     channels=1,
@@ -146,7 +192,7 @@ class LiveSessionManager:
                 out_thread = threading.Thread(target=self._audio_playback_worker, daemon=True)
                 out_thread.start()
 
-                # 3. Запуск одновременных задач чтения и записи сокета
+                # 5. Запуск одновременных задач чтения микрофона и сокета
                 send_task = asyncio.create_task(self._audio_sender_loop(ws))
                 recv_task = asyncio.create_task(self._ws_receiver_loop(ws))
 
@@ -164,6 +210,15 @@ class LiveSessionManager:
 
         finally:
             self.is_running = False
+            self.should_exit = True
+
+            # Очищаем аудиовывод
+            while not self.audio_out_queue.empty():
+                try:
+                    self.audio_out_queue.get_nowait()
+                except Exception:
+                    break
+
             if self.output_stream:
                 try:
                     self.output_stream.stop()
@@ -182,13 +237,18 @@ class LiveSessionManager:
             self.console.print("[dim]Выход из Live-режима. Ассистент снова слушает обычные команды.[/dim]\n")
 
     def _audio_playback_worker(self):
-        """Фоновый воркер воспроизведения входящих аудио-пакетов из Gemini"""
-        while self.is_running:
+        """Фоновый воркер воспроизведения входящих аудио-пакетов из Gemini со срезами по 2048 байт (~42мс)"""
+        step = 2048
+        while self.is_running and not self.should_exit:
             try:
-                chunk = self.audio_out_queue.get(timeout=0.1)
+                chunk = self.audio_out_queue.get(timeout=0.05)
                 if chunk and self.output_stream and not self.output_stream.closed:
                     self.is_assistant_speaking = True
-                    self.output_stream.write(chunk)
+                    for i in range(0, len(chunk), step):
+                        if not self.is_running or not self.is_assistant_speaking or self.should_exit:
+                            break
+                        sub = chunk[i:i+step]
+                        self.output_stream.write(sub)
                 else:
                     self.is_assistant_speaking = False
             except queue.Empty:
@@ -197,24 +257,58 @@ class LiveSessionManager:
                 self.is_assistant_speaking = False
 
     async def _audio_sender_loop(self, ws):
-        """Чтение микрофона (16kHz PCM), локальный VAD и отправка в сокет"""
+        """Чтение микрофона (16kHz PCM), локальный VAD с pre-roll/post-roll и отправка в сокет"""
         loop = asyncio.get_running_loop()
         input_queue = asyncio.Queue()
 
         def mic_callback(indata, frames, time_info, status):
-            if self.is_running:
-                # Копируем байты для передачи в async цикл
+            if self.is_running and not self.should_exit:
                 loop.call_soon_threadsafe(input_queue.put_nowait, bytes(indata))
+
+        # Пре-ролл буфер (6 блоков ~384 мс до детекции речи)
+        pre_roll = collections.deque(maxlen=6)
+        is_user_speaking = False
+        silence_blocks_count = 0
+        max_silence_blocks = 14  # ~900 мс тишины для завершения фразы
+        user_audio_buffer: List[bytes] = []
+
+        async def send_audio_chunk(pcm_bytes: bytes):
+            b64_audio = base64.b64encode(pcm_bytes).decode("utf-8")
+            msg = {
+                "realtimeInput": {
+                    "mediaChunks": [
+                        {
+                            "mimeType": "audio/pcm;rate=16000",
+                            "data": b64_audio
+                        }
+                    ]
+                }
+            }
+            await ws.send(json.dumps(msg))
+
+        def transcribe_user_speech(audio_bytes_list: List[bytes]):
+            """Локальная Whisper-транскрибация речи пользователя для вывода в консоль"""
+            try:
+                if not self.whisper_model or not audio_bytes_list:
+                    return
+                raw_bytes = b"".join(audio_bytes_list)
+                if len(raw_bytes) < 3200:  # Меньше 0.1 сек
+                    return
+                audio_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
+                audio_float32 = audio_int16.astype(np.float32) / 32768.0
+                segments, _ = self.whisper_model.transcribe(audio_float32, language="ru", beam_size=1)
+                text = " ".join([s.text for s in segments]).strip()
+                if text:
+                    self.console.print(f"\n[bold green]🎤 [Вы]:[/bold green] [white]{text}[/white]")
+                    LiveSessionManager._last_history.append({"role": "user", "text": text})
+                    if len(LiveSessionManager._last_history) > 20:
+                        LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
+            except Exception as e:
+                log_warning(f"Ошибка транскрибации речи пользователя: {e}")
 
         # Открываем микрофон 16kHz
         with sd.RawInputStream(samplerate=16000, channels=1, dtype='int16', blocksize=1024, callback=mic_callback):
             while self.is_running and not self.should_exit:
-                # Проверка таймаута неактивности
-                if time.time() - self.last_speech_time > self.inactivity_timeout:
-                    self.console.print("\n[yellow]⏳ Таймаут молчания 25 секунд. Завершаем диалог...[/yellow]")
-                    self.should_exit = True
-                    break
-
                 try:
                     pcm_data = await asyncio.wait_for(input_queue.get(), timeout=0.1)
                 except asyncio.TimeoutError:
@@ -228,35 +322,69 @@ class LiveSessionManager:
                 sum_sq = sum(s * s for s in shorts)
                 rms = math.sqrt(sum_sq / count) / 32768.0
 
-                # Адаптивный порог: если говорит ассистент, порог выше (для надежного Barge-in)
-                threshold = 0.035 if self.is_assistant_speaking else 0.012
-
-                if rms > threshold:
-                    self.last_speech_time = time.time()
-
-                    # Перебивание (Barge-in): если пользователь заговорил во время речи ассистента
-                    if self.is_assistant_speaking and rms > 0.035:
-                        # Очищаем очередь воспроизведения
+                # 1. Если сейчас говорит ассистент — проверяем перебивание (Barge-in)
+                if self.is_assistant_speaking:
+                    if rms > 0.035:
+                        # Пользователь громко заговорил — перебиваем ассистента!
+                        self.is_assistant_speaking = False
                         while not self.audio_out_queue.empty():
                             try:
                                 self.audio_out_queue.get_nowait()
                             except Exception:
                                 break
-                        self.is_assistant_speaking = False
+                        
+                        # Начинаем запись фразы пользователя
+                        is_user_speaking = True
+                        self.last_speech_time = time.time()
+                        silence_blocks_count = 0
+                        user_audio_buffer = list(pre_roll) + [pcm_data]
+                        for pr in pre_roll:
+                            await send_audio_chunk(pr)
+                        pre_roll.clear()
+                        await send_audio_chunk(pcm_data)
+                    else:
+                        pre_roll.append(pcm_data)
+                    continue
 
-                    # Отправляем аудио-чанк в Gemini
-                    b64_audio = base64.b64encode(pcm_data).decode("utf-8")
-                    msg = {
-                        "realtime_input": {
-                            "media_chunks": [
-                                {
-                                    "mime_type": "audio/pcm;rate=16000",
-                                    "data": b64_audio
-                                }
-                            ]
-                        }
-                    }
-                    await ws.send(json.dumps(msg))
+                # 2. Ассистент молчит — обычный VAD пользователя
+                speech_threshold = 0.012
+
+                if not is_user_speaking:
+                    if rms > speech_threshold:
+                        # Начало фразы
+                        is_user_speaking = True
+                        self.last_speech_time = time.time()
+                        silence_blocks_count = 0
+                        user_audio_buffer = list(pre_roll) + [pcm_data]
+                        for pr in pre_roll:
+                            await send_audio_chunk(pr)
+                        pre_roll.clear()
+                        await send_audio_chunk(pcm_data)
+                    else:
+                        pre_roll.append(pcm_data)
+                        # Проверка таймаута молчания 25 сек
+                        if time.time() - self.last_speech_time > self.inactivity_timeout:
+                            self.console.print("\n[yellow]⏳ Таймаут молчания 25 секунд. Завершаем диалог...[/yellow]")
+                            self.should_exit = True
+                            break
+                else:
+                    # Пользователь находится в процессе речи: отправляем ВСЕ блоки без пропусков!
+                    user_audio_buffer.append(pcm_data)
+                    await send_audio_chunk(pcm_data)
+
+                    if rms > speech_threshold:
+                        self.last_speech_time = time.time()
+                        silence_blocks_count = 0
+                    else:
+                        silence_blocks_count += 1
+                        if silence_blocks_count >= max_silence_blocks:
+                            # Фраза завершена (пользователь замолчал на ~900 мс)
+                            is_user_speaking = False
+                            silence_blocks_count = 0
+                            # Запуск локальной расшифровки в фоне
+                            saved_audio = list(user_audio_buffer)
+                            user_audio_buffer = []
+                            threading.Thread(target=transcribe_user_speech, args=(saved_audio,), daemon=True).start()
 
     async def _ws_receiver_loop(self, ws):
         """Приём ответов от Gemini: текст, аудио, вызовы инструментов и токены"""
@@ -282,30 +410,49 @@ class LiveSessionManager:
             # 2. Обработка контента от сервера
             server_content = data.get("serverContent", {})
             if server_content:
+                # Проверка перебивания со стороны Gemini
+                if server_content.get("interrupted"):
+                    while not self.audio_out_queue.empty():
+                        try:
+                            self.audio_out_queue.get_nowait()
+                        except Exception:
+                            break
+                    self.is_assistant_speaking = False
+                    if role_label_printed:
+                        self.console.print(" [dim yellow][перебито][/dim yellow]")
+                        role_label_printed = False
+                        current_ai_text.clear()
+
                 model_turn = server_content.get("modelTurn", {})
                 parts = model_turn.get("parts", [])
-                
                 for part in parts:
-                    # Входящий звук
+                    # Входящий звук (24kHz PCM)
                     if "inlineData" in part:
                         b64_bytes = part["inlineData"].get("data", "")
                         if b64_bytes:
                             raw_audio = base64.b64decode(b64_bytes)
                             self.audio_out_queue.put(raw_audio)
+                            self.is_assistant_speaking = True
 
-                    # Входящий текст транскрибации ответа
-                    if "text" in part:
-                        t = part["text"]
-                        if not role_label_printed:
-                            token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
-                            self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="")
-                            role_label_printed = True
-                        self.console.print(f"[white]{t}[/white]", end="")
-                        current_ai_text.append(t)
+                # Входящий текст транскрибации ответа ассистента
+                out_tr = server_content.get("outputTranscription", {})
+                if out_tr and "text" in out_tr:
+                    t = out_tr["text"]
+                    if not role_label_printed:
+                        token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
+                        self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="", flush=True)
+                        role_label_printed = True
+                    self.console.print(f"[white]{t}[/white]", end="", flush=True)
+                    current_ai_text.append(t)
 
                 if server_content.get("turnComplete"):
                     if role_label_printed:
                         self.console.print()
+                        full_turn_text = "".join(current_ai_text).strip()
+                        if full_turn_text:
+                            LiveSessionManager._last_history.append({"role": "assistant", "text": full_turn_text})
+                            if len(LiveSessionManager._last_history) > 20:
+                                LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
                         role_label_printed = False
                         current_ai_text.clear()
 
@@ -328,8 +475,8 @@ class LiveSessionManager:
                     })
 
                 tool_resp = {
-                    "tool_response": {
-                        "function_responses": responses
+                    "toolResponse": {
+                        "functionResponses": responses
                     }
                 }
                 await ws.send(json.dumps(tool_resp))
@@ -403,7 +550,7 @@ class LiveSessionManager:
         elif name == "web_search":
             q = args.get("query", "")
             self.console.print(f"\n[bold yellow]🔍 [Поиск в интернете]: {q}...[/bold yellow]")
-            search_res = self.search_service.search(q)
+            search_res = await asyncio.to_thread(self.search_service.search, q)
             return {"search_results": search_res}
 
         elif name == "end_conversation":
@@ -437,6 +584,14 @@ class LiveSessionManager:
             f"2. Если пользователь спрашивает свежие факты, погоду, новости, дискографию — вызывай инструмент `web_search`.\n"
             f"3. Если пользователь прощается или просит положить трубку ('пока', 'хватит', 'отбой', 'положи трубку') — вызывай `end_conversation`.\n"
         )
+
+        if resume_context and LiveSessionManager._last_history:
+            prev_turns = "\n".join([f"- {h['role']}: {h['text']}" for h in LiveSessionManager._last_history[-6:]])
+            system_instruction += (
+                f"\nВНИМАНИЕ: Пользователь только что вернулся в разговор ('Морсик, подожди!'). "
+                f"Вот последние реплики предыдущего диалога:\n{prev_turns}\n"
+                f"Поприветствуй пользователя с возвращением и продолжи начатую мысль."
+            )
 
         tools_declaration = [
             {

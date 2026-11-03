@@ -1,5 +1,8 @@
 {
   "trigger": "Морсик",
   "tts_enabled": true,
-  "volume": 70
+  "volume": 40,
+  "voice": "xenia",
+  "live_model": "models/gemini-3.8-live",
+  "live_voice": "auto"
 }

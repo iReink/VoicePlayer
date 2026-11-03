@@ -140,6 +140,17 @@ class VoiceListener:
         self._model: Optional[WhisperModel] = None
         self._is_tts_active: bool = False
         self._force_command_mode: bool = False
+        self._is_paused: bool = False
+
+    def pause_listening(self):
+        """Временно освободить микрофон для сторонних сессий (например, Live API)"""
+        self._is_paused = True
+        log_info("VoiceListener приостановлен (микрофон освобождён)")
+
+    def resume_listening(self):
+        """Возобновить прослушивание микрофона"""
+        self._is_paused = False
+        log_info("VoiceListener возобновлён")
 
     def set_tts_active(self, active: bool):
         """Уведомляет о начале/окончании речи TTS для отключения записи собственного голоса"""
@@ -187,6 +198,8 @@ class VoiceListener:
     def stop(self):
         """Остановка прослушивания"""
         self._running = False
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=0.6)
         log_info("Остановка VoiceListener")
 
     def _notify_status(self, status: str):
@@ -215,6 +228,9 @@ class VoiceListener:
             return
 
         while self._running:
+            if self._is_paused:
+                time.sleep(0.1)
+                continue
             try:
                 log_debug("Открытие аудиопотока микрофона...")
                 with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32', blocksize=block_size) as stream:
@@ -223,7 +239,7 @@ class VoiceListener:
                     silence_blocks = 0
                     log_info("Аудиопоток микрофона открыт и слушает")
 
-                    while self._running:
+                    while self._running and not self._is_paused:
                         block, overflowed = stream.read(block_size)
                         if self._is_tts_active:
                             is_recording = False

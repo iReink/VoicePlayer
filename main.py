@@ -260,17 +260,18 @@ def main():
     def run_live_dialog(resume_context: bool = False):
         """Запуск сессии живого общения Gemini Multimodal Live API"""
         log_info(f"Запуск Live-диалога (resume={resume_context})")
-        voice_listener.set_tts_active(True)
+        voice_listener.pause_listening()
         live_mgr = LiveSessionManager(
             config_manager=config,
             player=player,
             music_service=service,
+            whisper_model=voice_listener._get_model(),
             console=console
         )
         try:
             live_mgr.run_sync(resume_context=resume_context)
         finally:
-            voice_listener.set_tts_active(False)
+            voice_listener.resume_listening()
 
     try:
         while True:
