@@ -1,6 +1,8 @@
 """
 Модуль голосового ввода на базе Whisper-Small (GPU CUDA / CPU) с поддержкой логирования и нечеткого триггера
 """
+import os
+import sys
 import re
 import time
 import threading
@@ -11,6 +13,10 @@ import numpy as np
 import sounddevice as sd
 import ctranslate2
 from faster_whisper import WhisperModel
+try:
+    from faster_whisper.vad import get_vad_model
+except ImportError:
+    get_vad_model = None
 
 from logger import log_debug, log_info, log_warning, log_error
 
@@ -215,12 +221,22 @@ class VoiceListener:
         sample_rate = 16000
         block_size = 1024  # ~64 ms
         
-        base_threshold = 0.012
-        noise_floor = 0.005
         max_silence_blocks = int(0.70 / (block_size / sample_rate))  # 0.70 сек тишины
         min_speech_blocks = int(0.35 / (block_size / sample_rate))   # 0.35 сек речи
         max_speech_blocks = int(8.0 / (block_size / sample_rate))    # максимум 8 сек
         
+        # Инициализация нейросетевого VAD (Silero) для устойчивого отсечения шумов вентиляторов, эха и колонок
+        vad_model = None
+        if get_vad_model is not None:
+            try:
+                vad_model = get_vad_model()
+                log_info("Нейросетевой VAD (Silero) успешно инициализирован")
+            except Exception as e:
+                log_warning(f"Не удалось загрузить Silero VAD ({e}), используется адаптивный RMS детектор")
+
+        consecutive_unrecognized = 0
+        backoff_until = 0.0
+
         try:
             model = self._get_model()
         except Exception as e:
@@ -239,6 +255,7 @@ class VoiceListener:
                     audio_buffer = []
                     is_recording = False
                     silence_blocks = 0
+                    noise_floor = 0.005
                     log_info("Аудиопоток микрофона открыт и слушает")
 
                     while self._running and not self._is_paused:
@@ -249,31 +266,58 @@ class VoiceListener:
                             silence_blocks = 0
                             continue
 
+                        now = time.time()
+                        if now < backoff_until and not is_recording:
+                            continue
+
                         if overflowed:
                             log_warning("Audio buffer overflowed")
 
-                        rms = float(np.sqrt(np.mean(block**2)))
+                        block_flat = block.flatten().astype(np.float32)
+                        rms = float(np.sqrt(np.mean(block_flat**2)))
                         music_active = self.is_music_playing() if self.is_music_playing else False
 
-                        # Адаптация уровня шума (динамическая компенсация громкости музыки)
-                        if not is_recording:
-                            if music_active:
-                                # Музыка играет: фоновый шум микрофона от колонок значительно выше
-                                noise_floor = noise_floor * 0.94 + min(rms, 0.080) * 0.06
-                                current_threshold = min(0.090, max(0.026, noise_floor * 1.5))
-                            else:
-                                # В тишине микрофон сверхчувствителен для тихих команд
-                                noise_floor = noise_floor * 0.96 + min(rms, 0.035) * 0.04
-                                current_threshold = min(0.040, max(base_threshold, noise_floor * 2.0))
-                        else:
-                            current_threshold = min(0.075 if music_active else 0.035, max(base_threshold, noise_floor * 1.3))
+                        # Оценка вероятности речи нейросетью Silero VAD
+                        vad_prob = 0.0
+                        if vad_model is not None and rms > 0.006:
+                            try:
+                                vad_res = vad_model(block_flat)
+                                vad_prob = float(np.max(vad_res))
+                            except Exception:
+                                vad_prob = 0.0
 
-                        if rms > current_threshold:
+                        # Адаптация шумового фона для fallback
+                        if not is_recording:
+                            noise_floor = noise_floor * 0.96 + min(rms, 0.050) * 0.04
+
+                        # Проверка речевой активности
+                        if vad_model is not None:
+                            # Silero VAD:
+                            # Вентиляторы/гул/эхо выдают prob ~0.02-0.05 даже при высоком RMS.
+                            # Человеческий голос выдает prob >= 0.50..0.95.
+                            if not is_recording:
+                                if music_active:
+                                    min_prob = 0.70 if consecutive_unrecognized >= 2 else 0.62
+                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.022)
+                                else:
+                                    min_prob = 0.65 if consecutive_unrecognized >= 3 else 0.50
+                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.008)
+                            else:
+                                if music_active:
+                                    is_voice = (vad_prob >= 0.35) or (vad_prob >= 0.20 and rms >= 0.025)
+                                else:
+                                    is_voice = (vad_prob >= 0.25) or (vad_prob >= 0.15 and rms >= 0.010)
+                        else:
+                            # Fallback: адаптивный RMS без жесткого верхнего лимита
+                            threshold = max(0.015, noise_floor * (2.2 if music_active else 2.5))
+                            is_voice = rms > threshold
+
+                        if is_voice:
                             if not is_recording:
                                 is_recording = True
                                 silence_blocks = 0
-                                audio_buffer = [block.copy()]
-                                log_debug(f"Начало речи (RMS={rms:.4f}, порог={current_threshold:.4f})")
+                                audio_buffer = [block_flat.copy()]
+                                log_debug(f"Начало речи (RMS={rms:.4f}, VAD={vad_prob:.3f})")
                                 self._notify_status("RECORDING")
                                 if self.on_speech_start:
                                     try:
@@ -281,11 +325,11 @@ class VoiceListener:
                                     except Exception:
                                         pass
                             else:
-                                audio_buffer.append(block.copy())
+                                audio_buffer.append(block_flat.copy())
                                 silence_blocks = 0
                         else:
                             if is_recording:
-                                audio_buffer.append(block.copy())
+                                audio_buffer.append(block_flat.copy())
                                 silence_blocks += 1
 
                                 if silence_blocks >= max_silence_blocks or len(audio_buffer) >= max_speech_blocks:
@@ -296,10 +340,18 @@ class VoiceListener:
                                     
                                     recognized = False
                                     if len(audio_buffer) >= min_speech_blocks:
-                                        audio_data = np.concatenate(audio_buffer, axis=0).flatten()
+                                        audio_data = np.concatenate(audio_buffer, axis=0)
                                         recognized = self._process_audio(model, audio_data)
                                     else:
                                         log_debug("Слишком короткий сегмент аудио, пропуск")
+
+                                    if recognized:
+                                        consecutive_unrecognized = 0
+                                    else:
+                                        consecutive_unrecognized += 1
+                                        if consecutive_unrecognized >= 3:
+                                            # Защита от бесконечного цикла ложных срабатываний
+                                            backoff_until = time.time() + 0.40
 
                                     if self.on_speech_end:
                                         try:
@@ -336,7 +388,9 @@ class VoiceListener:
                 audio_data,
                 beam_size=3,
                 initial_prompt=initial_prompt,
-                condition_on_previous_text=False
+                condition_on_previous_text=False,
+                vad_filter=True,
+                vad_parameters=dict(threshold=0.5, min_silence_duration_ms=300)
             )
             raw_text = "".join([s.text for s in segments]).strip()
         except Exception as e:

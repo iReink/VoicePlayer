@@ -31,6 +31,10 @@ from rich.panel import Panel
 
 from logger import log_info, log_warning, log_error
 from search_service import SearchService
+try:
+    from faster_whisper.vad import get_vad_model
+except ImportError:
+    get_vad_model = None
 
 # Доступные проверенные голоса в Gemini Live API
 LIVE_VOICES = {
@@ -293,6 +297,14 @@ class LiveSessionManager:
             }
             await ws.send(json.dumps(msg))
 
+        # Инициализация Silero VAD для точного отсечения шумов микрофона
+        vad_model = None
+        if get_vad_model is not None:
+            try:
+                vad_model = get_vad_model()
+            except Exception:
+                vad_model = None
+
         # Открываем микрофон 16kHz
         with sd.RawInputStream(samplerate=16000, channels=1, dtype='int16', blocksize=1024, callback=mic_callback):
             while self.is_running and not self.should_exit:
@@ -301,17 +313,28 @@ class LiveSessionManager:
                 except asyncio.TimeoutError:
                     continue
 
-                # Вычисляем RMS для проверки энергии голоса
+                # Анализ аудио-блока
                 count = len(pcm_data) // 2
                 if count == 0:
                     continue
-                shorts = struct.unpack(f"<{count}h", pcm_data)
-                sum_sq = sum(s * s for s in shorts)
-                rms = math.sqrt(sum_sq / count) / 32768.0
+                shorts = np.frombuffer(pcm_data, dtype=np.int16)
+                chunk_float = shorts.astype(np.float32) / 32768.0
+                rms = float(np.sqrt(np.mean(chunk_float**2)))
+
+                # Нейросетевая вероятность речи Silero VAD
+                vad_prob = 0.0
+                if vad_model is not None and rms > 0.006:
+                    try:
+                        vad_res = vad_model(chunk_float)
+                        vad_prob = float(np.max(vad_res))
+                    except Exception:
+                        vad_prob = 0.0
 
                 # 1. Если сейчас говорит ассистент — отслеживаем только устойчивое громкое перебивание (Barge-in)
                 if self.is_assistant_speaking:
-                    if rms > 0.055:
+                    # Требуется явный человеческий голос (не эхо из колонок и не шумы ПК)
+                    is_barge = (vad_prob >= 0.70 and rms > 0.050) if vad_model else (rms > 0.060)
+                    if is_barge:
                         barge_in_blocks += 1
                         if barge_in_blocks >= 3:  # Требуется минимум ~200 мс громкого голоса
                             log_info("Barge-in: пользователь прервал речь ассистента")
@@ -338,12 +361,21 @@ class LiveSessionManager:
                         pre_roll.append(pcm_data)
                     continue
 
-                # 2. Ассистент молчит — обычный чувствительный VAD пользователя
-                speech_threshold = 0.014
+                # 2. Ассистент молчит — нейросетевой VAD пользователя
+                if vad_model is not None:
+                    # Вентиляторы/гул дают prob ~0.02-0.05 (игнорируются)
+                    if not is_user_speaking:
+                        is_speech = (vad_prob >= 0.55 and rms >= 0.012)
+                    else:
+                        is_speech = (vad_prob >= 0.25) or (vad_prob >= 0.12 and rms >= 0.012)
+                else:
+                    speech_threshold = 0.020
+                    is_speech = rms > speech_threshold
+
                 barge_in_blocks = 0
 
                 if not is_user_speaking:
-                    if rms > speech_threshold:
+                    if is_speech:
                         # Начало фразы пользователя
                         is_user_speaking = True
                         self.last_speech_time = time.time()
@@ -365,7 +397,7 @@ class LiveSessionManager:
                     user_audio_buffer.append(pcm_data)
                     await send_audio_chunk(pcm_data)
 
-                    if rms > speech_threshold:
+                    if is_speech:
                         self.last_speech_time = time.time()
                         silence_blocks_count = 0
                     else:
@@ -387,7 +419,12 @@ class LiveSessionManager:
                                         audio_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
                                         audio_float32 = audio_int16.astype(np.float32) / 32768.0
                                         segments, _ = await asyncio.to_thread(
-                                            self.whisper_model.transcribe, audio_float32, language="ru", beam_size=1
+                                            self.whisper_model.transcribe,
+                                            audio_float32,
+                                            language="ru",
+                                            beam_size=1,
+                                            vad_filter=True,
+                                            vad_parameters=dict(threshold=0.5, min_silence_duration_ms=250)
                                         )
                                         user_text = " ".join([s.text for s in segments]).strip()
                                 except Exception as e:
