@@ -11,7 +11,9 @@ DEFAULT_SETTINGS = {
     "trigger": "Морсик",
     "tts_enabled": True,
     "volume": 70,
-    "voice": "xenia"
+    "voice": "xenia",
+    "live_model": "models/gemini-3.8-live",
+    "live_voice": "auto"
 }
 
 class ConfigManager:
@@ -71,4 +73,22 @@ class ConfigManager:
     @volume.setter
     def volume(self, value: int):
         self.settings["volume"] = max(0, min(100, int(value)))
+        self.save()
+
+    @property
+    def live_model(self) -> str:
+        return self.settings.get("live_model", "models/gemini-3.8-live")
+
+    @live_model.setter
+    def live_model(self, value: str):
+        self.settings["live_model"] = value.strip()
+        self.save()
+
+    @property
+    def live_voice(self) -> str:
+        return self.settings.get("live_voice", "auto")
+
+    @live_voice.setter
+    def live_voice(self, value: str):
+        self.settings["live_voice"] = value.strip()
         self.save()

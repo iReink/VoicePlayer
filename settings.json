@@ -2,5 +2,7 @@
   "trigger": "Махнопопка",
   "tts_enabled": true,
   "volume": 40,
-  "voice": "xenia"
+  "voice": "aidar",
+  "live_model": "models/gemini-3.8-live",
+  "live_voice": "auto"
 }

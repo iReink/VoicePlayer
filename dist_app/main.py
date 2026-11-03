@@ -32,6 +32,7 @@ from parser import CommandParser
 from llm_nlu import HybridNLU
 from tts import TTSEngine, AVAILABLE_VOICES
 from voice import VoiceListener
+from live_session import LiveSessionManager
 
 console = Console()
 
@@ -56,6 +57,7 @@ def print_help(current_trigger: str):
     table.add_row("Громкость", "громкость 80 / тише / громче")
     table.add_row("Лайки", "лайк (+) / дизлайк (-)")
     table.add_row("Информация", "что играет / инфо / очередь")
+    table.add_row("Live-диалог", "«поговори со мной» / «давай поболтаем» / «подожди»")
     table.add_row("Ключи и токены", "сменить токен / сменить api ключ")
     table.add_row("Выход", "выход / exit / q")
     
@@ -255,6 +257,21 @@ def main():
             if was_playing:
                 player.fade_in_resume(duration=0.5)
 
+    def run_live_dialog(resume_context: bool = False):
+        """Запуск сессии живого общения Gemini Multimodal Live API"""
+        log_info(f"Запуск Live-диалога (resume={resume_context})")
+        voice_listener.set_tts_active(True)
+        live_mgr = LiveSessionManager(
+            config_manager=config,
+            player=player,
+            music_service=service,
+            console=console
+        )
+        try:
+            live_mgr.run_sync(resume_context=resume_context)
+        finally:
+            voice_listener.set_tts_active(False)
+
     try:
         while True:
             try:
@@ -297,6 +314,20 @@ def main():
                         expand=False
                     ))
                     tts.say(answer, pause_music=True)
+
+                # Запуск Live-диалога
+                elif action == "START_LIVE_CHAT":
+                    run_live_dialog(resume_context=False)
+
+                # Возобновление диалога при фразе «Морсик, подожди!»
+                elif action == "RESUME_LIVE_CHAT":
+                    if LiveSessionManager.can_resume():
+                        console.print("[bold green]✓ Возобновляем Live-диалог с сохранённым контекстом![/bold green]")
+                        tts.say("Я тут, продолжаем!", pause_music=False)
+                        run_live_dialog(resume_context=True)
+                    else:
+                        console.print("[dim]С момента окончания диалога прошло слишком много времени[/dim]")
+                        tts.say("Диалог уже завершён. Скажите «поговори со мной» для нового разговора.", pause_music=False)
 
                 # Запрос текущего триггера
                 elif action == "GET_TRIGGER":
