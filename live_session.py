@@ -13,6 +13,7 @@ import struct
 import threading
 import queue
 import collections
+import re
 from typing import Optional, Dict, Any, List
 
 if sys.platform == "win32":
@@ -289,26 +290,6 @@ class LiveSessionManager:
             }
             await ws.send(json.dumps(msg))
 
-        def transcribe_user_speech(audio_bytes_list: List[bytes]):
-            """Локальная Whisper-транскрибация речи пользователя для вывода в консоль"""
-            try:
-                if not self.whisper_model or not audio_bytes_list:
-                    return
-                raw_bytes = b"".join(audio_bytes_list)
-                if len(raw_bytes) < 3200:  # Меньше 0.1 сек
-                    return
-                audio_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
-                audio_float32 = audio_int16.astype(np.float32) / 32768.0
-                segments, _ = self.whisper_model.transcribe(audio_float32, language="ru", beam_size=1)
-                text = " ".join([s.text for s in segments]).strip()
-                if text:
-                    self.console.print(f"\n[bold green]🎤 [Вы]:[/bold green] [white]{text}[/white]")
-                    LiveSessionManager._last_history.append({"role": "user", "text": text})
-                    if len(LiveSessionManager._last_history) > 20:
-                        LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
-            except Exception as e:
-                log_warning(f"Ошибка транскрибации речи пользователя: {e}")
-
         # Открываем микрофон 16kHz
         with sd.RawInputStream(samplerate=16000, channels=1, dtype='int16', blocksize=1024, callback=mic_callback):
             while self.is_running and not self.should_exit:
@@ -391,18 +372,73 @@ class LiveSessionManager:
                             is_user_speaking = False
                             silence_blocks_count = 0
 
-                            # СТРОГО ОБЯЗАТЕЛЬНО: уведомляем Gemini о завершении хода пользователя!
-                            turn_complete_msg = {
-                                "clientContent": {
-                                    "turnComplete": True
-                                }
-                            }
-                            await ws.send(json.dumps(turn_complete_msg))
-
-                            # Запуск локальной расшифровки Whisper в фоне
                             saved_audio = list(user_audio_buffer)
                             user_audio_buffer = []
-                            threading.Thread(target=transcribe_user_speech, args=(saved_audio,), daemon=True).start()
+
+                            # Быстрая транскрибация речи пользователя локальным Whisper
+                            user_text = ""
+                            if self.whisper_model and saved_audio:
+                                try:
+                                    raw_bytes = b"".join(saved_audio)
+                                    if len(raw_bytes) >= 3200:
+                                        audio_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
+                                        audio_float32 = audio_int16.astype(np.float32) / 32768.0
+                                        segments, _ = await asyncio.to_thread(
+                                            self.whisper_model.transcribe, audio_float32, language="ru", beam_size=1
+                                        )
+                                        user_text = " ".join([s.text for s in segments]).strip()
+                                except Exception as e:
+                                    log_warning(f"Ошибка транскрибации речи пользователя: {e}")
+
+                            if user_text:
+                                self.console.print(f"\n[bold green]🎤 [Вы]:[/bold green] [white]{user_text}[/white]")
+                                LiveSessionManager._last_history.append({"role": "user", "text": user_text})
+                                if len(LiveSessionManager._last_history) > 20:
+                                    LiveSessionManager._last_history = LiveSessionManager._last_history[-20:]
+
+                                u_lower = user_text.lower().strip()
+
+                                # Мгновенный Fast-Path для команд плеера прямо во время разговора
+                                if any(w in u_lower for w in ["останови", "пауза", "стоп", "приостанови", "останую"]):
+                                    self.player.pause()
+                                    self.console.print("\n[yellow]⏸ [Команда]: Музыка на паузе[/yellow]")
+                                elif any(w in u_lower for w in ["возобнови", "продолжи", "играй"]):
+                                    self.player.resume()
+                                    self.player.duck(True)
+                                    self.console.print("\n[green]▶ [Команда]: Музыка возобновлена[/green]")
+                                elif any(w in u_lower for w in ["следующий", "переключи", "дальше"]):
+                                    self.player.next_track()
+                                    cur = self.player.current_track
+                                    info = self.service.format_track_info(cur) if cur else {}
+                                    self.console.print(f"\n[cyan]⏭ [Команда]: Следующий трек: {info.get('artists')} — {info.get('title')}[/cyan]")
+                                elif any(w in u_lower for w in ["предыдущий", "назад"]):
+                                    self.player.prev_track()
+                                    cur = self.player.current_track
+                                    info = self.service.format_track_info(cur) if cur else {}
+                                    self.console.print(f"\n[cyan]⏮ [Команда]: Предыдущий трек: {info.get('artists')} — {info.get('title')}[/cyan]")
+                                elif any(w in u_lower for w in ["хватит", "положи трубку", "прекратить разговор", "отбой", "пока"]):
+                                    self.console.print("\n[yellow]Завершение диалога по просьбе пользователя...[/yellow]")
+                                    self.should_exit = True
+
+                                # Передаем чистый транскрибированный текст в Gemini в clientContent
+                                turn_msg = {
+                                    "clientContent": {
+                                        "turns": [{
+                                            "role": "user",
+                                            "parts": [{"text": user_text}]
+                                        }],
+                                        "turnComplete": True
+                                    }
+                                }
+                                await ws.send(json.dumps(turn_msg))
+                            else:
+                                # Пустой turnComplete если речь не распознана
+                                turn_msg = {
+                                    "clientContent": {
+                                        "turnComplete": True
+                                    }
+                                }
+                                await ws.send(json.dumps(turn_msg))
 
     async def _ws_receiver_loop(self, ws):
         """Приём ответов от Gemini: текст, аудио, вызовы инструментов и токены"""
@@ -462,16 +498,18 @@ class LiveSessionManager:
                     out_tr = server_content.get("outputTranscription", {})
                     if out_tr and "text" in out_tr:
                         t = out_tr["text"]
-                        if not role_label_printed:
-                            token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
-                            self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="")
-                            role_label_printed = True
-                        self.console.print(f"[white]{t}[/white]", end="")
-                        try:
-                            sys.stdout.flush()
-                        except Exception:
-                            pass
-                        current_ai_text.append(t)
+                        clean_t = re.sub(r'<no speech>|\{pause\}', '', t)
+                        if clean_t:
+                            if not role_label_printed:
+                                token_str = f"[dim cyan]({self.tokens_used}/{self.max_tokens} токенов)[/dim cyan]"
+                                self.console.print(f"\n[bold cyan]🤖 [Морсик]:[/bold cyan] {token_str} ", end="")
+                                role_label_printed = True
+                            self.console.print(f"[white]{clean_t}[/white]", end="")
+                            try:
+                                sys.stdout.flush()
+                            except Exception:
+                                pass
+                            current_ai_text.append(clean_t)
 
                     if server_content.get("turnComplete"):
                         if role_label_printed:
@@ -532,6 +570,7 @@ class LiveSessionManager:
 
         elif name == "resume_music":
             self.player.resume()
+            self.player.duck(True)
             self.console.print("\n[green]▶ [Команда]: Музыка возобновлена[/green]")
             return {"status": "playing"}
 
@@ -557,13 +596,58 @@ class LiveSessionManager:
                 return {"status": "liked", "track": cur.title}
             return {"status": "error", "message": "Nothing playing"}
 
+        elif name == "play_my_wave":
+            tracks = self.service.get_my_wave_batch()
+            if tracks:
+                self.player.play_tracks(tracks, is_my_wave=True, playlist_title="Моя волна")
+                self.player.duck(True)
+                cur = self.player.current_track
+                info = self.service.format_track_info(cur) if cur else {}
+                self.console.print(f"\n[green]🎵 [Команда]: Включаем Мою волну[/green]")
+                return {
+                    "status": "success",
+                    "description": "Моя волна",
+                    "now_playing": f"{info.get('artists')} — {info.get('title')}",
+                    "artist": info.get('artists', ''),
+                    "track": info.get('title', '')
+                }
+            return {"status": "error", "message": "Не удалось запустить Мою волну"}
+
+        elif name == "play_favorites":
+            tracks, desc = self.service.get_liked_tracks()
+            if tracks:
+                self.player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
+                self.player.duck(True)
+                cur = self.player.current_track
+                info = self.service.format_track_info(cur) if cur else {}
+                self.console.print(f"\n[green]🎵 [Команда]: Включаем {desc}[/green]")
+                return {
+                    "status": "success",
+                    "description": desc,
+                    "now_playing": f"{info.get('artists')} — {info.get('title')}",
+                    "artist": info.get('artists', ''),
+                    "track": info.get('title', '')
+                }
+            return {"status": "error", "message": "Любимые треки пусты"}
+
         elif name == "play_music":
             q = args.get("query", "")
+            is_wave = any(w in q.lower() for w in ["волна", "волну", "бодр", "энергич", "радио"])
             tracks, desc = self.service.smart_search(q)
             if tracks:
-                self.player.play_tracks(tracks, playlist_title=desc)
+                self.player.play_tracks(tracks, is_my_wave=is_wave, playlist_title=desc)
+                self.player.duck(True)
+                cur = self.player.current_track
+                info = self.service.format_track_info(cur) if cur else {}
                 self.console.print(f"\n[green]🎵 [Команда]: Включаем {desc}[/green]")
-                return {"status": "success", "description": desc}
+                return {
+                    "status": "success",
+                    "description": desc,
+                    "now_playing": f"{info.get('artists')} — {info.get('title')}",
+                    "artist": info.get('artists', ''),
+                    "track": info.get('title', ''),
+                    "album": info.get('album', '')
+                }
             return {"status": "not_found", "message": f"Не найдено по запросу {q}"}
 
         elif name == "get_player_state":
@@ -574,6 +658,9 @@ class LiveSessionManager:
                 "is_playing": self.player.is_playing,
                 "volume": self.player.volume,
                 "current_track": f"{info.get('artists')} — {info.get('title')}" if cur else "Ничего не играет",
+                "artist": info.get('artists', ''),
+                "track": info.get('title', ''),
+                "album": info.get('album', ''),
                 "next_track": f"{next_t.get('artists')} — {next_t.get('title')}" if next_t else "Конец очереди"
             }
 
@@ -610,9 +697,14 @@ class LiveSessionManager:
             f"Отвечай кратко, живо, без длинных лекций и книжных штампов (1-3 ёмких предложения на реплику).\n\n"
             f"ТЕКУЩИЙ КОНТЕКСТ МУЗЫКАЛЬНОГО ПЛЕЕРА:\n{player_context}\n"
             f"ИНСТРУКЦИИ:\n"
-            f"1. Если пользователь просит управлять музыкой (громче, тише, пауза, следующий трек, включи песню) — обязательно вызывай соответствующий инструмент (toolCall).\n"
-            f"2. Если пользователь спрашивает свежие факты, погоду, новости, дискографию — вызывай инструмент `web_search`.\n"
-            f"3. Если пользователь прощается или просит положить трубку ('пока', 'хватит', 'отбой', 'положи трубку') — вызывай `end_conversation`.\n"
+            f"1. Если пользователь просит включить что-то бодрое, энергичное или радио — вызывай инструмент `play_my_wave`.\n"
+            f"2. Если пользователь просит включить любимый плейлист, любимую музыку или лайки — вызывай инструмент `play_favorites`.\n"
+            f"3. Если пользователь просит конкретную песню, группу, альбом или плейлист — вызывай `play_music(query=...)`.\n"
+            f"4. Если пользователь спрашивает, что за песня сейчас играет, кто поёт или просит рассказать об исполнителе/группе/треке:\n"
+            f"   - ОБЯЗАТЕЛЬНО вызови `get_player_state` (если в контексте нет текущего трека), чтобы точно знать исполнителя и песню.\n"
+            f"   - Если пользователь просит рассказать о группе или треке подробнее — вызови `web_search` с запросом об исполнителе или песне, и расскажи пользователю 2-3 интересных факта.\n"
+            f"5. Если пользователь просит остановить музыку, поставить на паузу, сделать тише или громче — вызывай `pause_music`, `change_volume`.\n"
+            f"6. Если пользователь прощается или просит закончить ('пока', 'хватит', 'отбой', 'положи трубку', 'прекратить разговор') — вызывай `end_conversation`.\n"
         )
 
         if resume_context and LiveSessionManager._last_history:
@@ -668,6 +760,16 @@ class LiveSessionManager:
                 "parameters": {"type": "OBJECT", "properties": {}}
             },
             {
+                "name": "play_my_wave",
+                "description": "Включить персональную 'Мою волну' или музыку под настроение (бодрая, энергичная, для фона)",
+                "parameters": {"type": "OBJECT", "properties": {}}
+            },
+            {
+                "name": "play_favorites",
+                "description": "Включить любимые треки пользователя (плейлист 'Мне нравится' / любимая музыка)",
+                "parameters": {"type": "OBJECT", "properties": {}}
+            },
+            {
                 "name": "play_music",
                 "description": "Включить трек, артиста, альбом или плейлист по названию",
                 "parameters": {
@@ -678,12 +780,12 @@ class LiveSessionManager:
             },
             {
                 "name": "get_player_state",
-                "description": "Получить актуальный статус плеера, текущий и следующий треки",
+                "description": "Получить актуальный статус плеера, текущий трек, артиста и альбом",
                 "parameters": {"type": "OBJECT", "properties": {}}
             },
             {
                 "name": "web_search",
-                "description": "Поиск в интернете свежих новостей, фактов, погоды и информации",
+                "description": "Поиск в интернете свежих новостей, фактов об артистах, истории групп, погоды и информации",
                 "parameters": {
                     "type": "OBJECT",
                     "properties": {"query": {"type": "STRING", "description": "Поисковый запрос"}},

@@ -176,6 +176,34 @@ class MusicService:
         Умный поиск: анализирует общий результат поиска и выбирает лучший вариант
         (трек, исполнитель, альбом или плейлист).
         """
+        q_lower = query.lower().strip()
+
+        # 0. Прямой перехват персональных запросов пользователя
+        if any(w in q_lower for w in ["волна", "волну", "бодр", "энергич", "радио", "под настроен"]):
+            tracks = self.get_my_wave_batch()
+            if tracks:
+                return tracks, "Моя волна"
+
+        if any(w in q_lower for w in ["любим", "лайк", "нравит", "моя музык", "мои трек"]):
+            tracks, desc = self.get_liked_tracks()
+            if tracks:
+                return tracks, desc
+
+        if "мой плейлист" in q_lower:
+            return self.search_user_playlist(query)
+
+        if "плейлист дня" in q_lower:
+            return self.get_generated_playlist("playlistOfTheDay")
+
+        if "дежавю" in q_lower:
+            return self.get_generated_playlist("neverHeard")
+
+        if "премьер" in q_lower:
+            return self.get_generated_playlist("recentTracks")
+
+        if "тайник" in q_lower:
+            return self.get_generated_playlist("missedLikes")
+
         search_res = self.client.search(query, type_='all')
         
         # 1. Проверяем точный/наилучший результат от поискового движка Яндекса
