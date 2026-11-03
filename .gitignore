@@ -1,0 +1,35 @@
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Environment secrets and tokens (NEVER commit secrets!)
+.env
+dist_app/.env
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Logs
+*.log
+assistant.log
+Logs/
+
+# Downloaded AI Models (large binaries)
+models/
+dist_app/models/
+*.pt
+*.bin
+
+# Build & Installer output
+installer_output/
+dist_app/runtime/
+build/
+dist/
+
+# Scratch & temporary files
+scratch/
+*.tmp
