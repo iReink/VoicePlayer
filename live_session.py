@@ -75,6 +75,7 @@ class LiveSessionManager:
         # Аудио-буферы и очереди
         self.audio_out_queue = queue.Queue()
         self.is_assistant_speaking = False
+        self.barge_in_event = threading.Event()
         self.output_stream = None
 
     def _resolve_voice(self) -> str:
@@ -245,11 +246,12 @@ class LiveSessionManager:
                 if chunk and self.output_stream and not self.output_stream.closed:
                     self.is_assistant_speaking = True
                     for i in range(0, len(chunk), step):
-                        if not self.is_running or not self.is_assistant_speaking or self.should_exit:
+                        if not self.is_running or self.should_exit or self.barge_in_event.is_set():
                             break
                         sub = chunk[i:i+step]
                         self.output_stream.write(sub)
-                else:
+                
+                if self.audio_out_queue.empty():
                     self.is_assistant_speaking = False
             except queue.Empty:
                 self.is_assistant_speaking = False
@@ -269,8 +271,9 @@ class LiveSessionManager:
         pre_roll = collections.deque(maxlen=6)
         is_user_speaking = False
         silence_blocks_count = 0
-        max_silence_blocks = 14  # ~900 мс тишины для завершения фразы
+        max_silence_blocks = 12  # ~768 мс тишины для завершения фразы
         user_audio_buffer: List[bytes] = []
+        barge_in_blocks = 0
 
         async def send_audio_chunk(pcm_bytes: bytes):
             b64_audio = base64.b64encode(pcm_bytes).decode("utf-8")
@@ -322,36 +325,42 @@ class LiveSessionManager:
                 sum_sq = sum(s * s for s in shorts)
                 rms = math.sqrt(sum_sq / count) / 32768.0
 
-                # 1. Если сейчас говорит ассистент — проверяем перебивание (Barge-in)
+                # 1. Если сейчас говорит ассистент — отслеживаем только устойчивое громкое перебивание (Barge-in)
                 if self.is_assistant_speaking:
-                    if rms > 0.035:
-                        # Пользователь громко заговорил — перебиваем ассистента!
-                        self.is_assistant_speaking = False
-                        while not self.audio_out_queue.empty():
-                            try:
-                                self.audio_out_queue.get_nowait()
-                            except Exception:
-                                break
-                        
-                        # Начинаем запись фразы пользователя
-                        is_user_speaking = True
-                        self.last_speech_time = time.time()
-                        silence_blocks_count = 0
-                        user_audio_buffer = list(pre_roll) + [pcm_data]
-                        for pr in pre_roll:
-                            await send_audio_chunk(pr)
-                        pre_roll.clear()
-                        await send_audio_chunk(pcm_data)
+                    if rms > 0.055:
+                        barge_in_blocks += 1
+                        if barge_in_blocks >= 3:  # Требуется минимум ~200 мс громкого голоса
+                            log_info("Barge-in: пользователь прервал речь ассистента")
+                            barge_in_blocks = 0
+                            self.barge_in_event.set()
+                            while not self.audio_out_queue.empty():
+                                try:
+                                    self.audio_out_queue.get_nowait()
+                                except Exception:
+                                    break
+                            self.is_assistant_speaking = False
+                            
+                            # Начинаем запись реплики пользователя
+                            is_user_speaking = True
+                            self.last_speech_time = time.time()
+                            silence_blocks_count = 0
+                            user_audio_buffer = list(pre_roll) + [pcm_data]
+                            for pr in pre_roll:
+                                await send_audio_chunk(pr)
+                            pre_roll.clear()
+                            await send_audio_chunk(pcm_data)
                     else:
+                        barge_in_blocks = 0
                         pre_roll.append(pcm_data)
                     continue
 
-                # 2. Ассистент молчит — обычный VAD пользователя
-                speech_threshold = 0.012
+                # 2. Ассистент молчит — обычный чувствительный VAD пользователя
+                speech_threshold = 0.010
+                barge_in_blocks = 0
 
                 if not is_user_speaking:
                     if rms > speech_threshold:
-                        # Начало фразы
+                        # Начало фразы пользователя
                         is_user_speaking = True
                         self.last_speech_time = time.time()
                         silence_blocks_count = 0
@@ -368,7 +377,7 @@ class LiveSessionManager:
                             self.should_exit = True
                             break
                 else:
-                    # Пользователь находится в процессе речи: отправляем ВСЕ блоки без пропусков!
+                    # Пользователь находится в процессе речи: отправляем ВСЕ блоки в Gemini
                     user_audio_buffer.append(pcm_data)
                     await send_audio_chunk(pcm_data)
 
@@ -378,10 +387,19 @@ class LiveSessionManager:
                     else:
                         silence_blocks_count += 1
                         if silence_blocks_count >= max_silence_blocks:
-                            # Фраза завершена (пользователь замолчал на ~900 мс)
+                            # Фраза завершена (пользователь замолчал на ~750 мс)
                             is_user_speaking = False
                             silence_blocks_count = 0
-                            # Запуск локальной расшифровки в фоне
+
+                            # СТРОГО ОБЯЗАТЕЛЬНО: уведомляем Gemini о завершении хода пользователя!
+                            turn_complete_msg = {
+                                "clientContent": {
+                                    "turnComplete": True
+                                }
+                            }
+                            await ws.send(json.dumps(turn_complete_msg))
+
+                            # Запуск локальной расшифровки Whisper в фоне
                             saved_audio = list(user_audio_buffer)
                             user_audio_buffer = []
                             threading.Thread(target=transcribe_user_speech, args=(saved_audio,), daemon=True).start()
@@ -416,6 +434,7 @@ class LiveSessionManager:
                 if server_content:
                     # Проверка перебивания со стороны Gemini
                     if server_content.get("interrupted"):
+                        self.barge_in_event.set()
                         while not self.audio_out_queue.empty():
                             try:
                                 self.audio_out_queue.get_nowait()
@@ -435,6 +454,7 @@ class LiveSessionManager:
                             b64_bytes = part["inlineData"].get("data", "")
                             if b64_bytes:
                                 raw_audio = base64.b64decode(b64_bytes)
+                                self.barge_in_event.clear()
                                 self.audio_out_queue.put(raw_audio)
                                 self.is_assistant_speaking = True
 
