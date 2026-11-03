@@ -126,7 +126,8 @@ class VoiceListener:
         on_status: Optional[Callable[[str], None]] = None,
         on_speech_start: Optional[Callable[[], None]] = None,
         on_speech_end: Optional[Callable[[bool], None]] = None,
-        on_log: Optional[Callable[[str], None]] = None
+        on_log: Optional[Callable[[str], None]] = None,
+        is_music_playing: Optional[Callable[[], bool]] = None
     ):
         self.config = config_manager
         self.on_command = on_command
@@ -134,6 +135,7 @@ class VoiceListener:
         self.on_speech_start = on_speech_start
         self.on_speech_end = on_speech_end
         self.on_log = on_log
+        self.is_music_playing = is_music_playing
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -251,13 +253,20 @@ class VoiceListener:
                             log_warning("Audio buffer overflowed")
 
                         rms = float(np.sqrt(np.mean(block**2)))
+                        music_active = self.is_music_playing() if self.is_music_playing else False
 
-                        # Адаптация уровня шума (с верхним лимитом)
+                        # Адаптация уровня шума (динамическая компенсация громкости музыки)
                         if not is_recording:
-                            noise_floor = noise_floor * 0.96 + min(rms, 0.035) * 0.04
-                            current_threshold = min(0.040, max(base_threshold, noise_floor * 2.0))
+                            if music_active:
+                                # Музыка играет: фоновый шум микрофона от колонок значительно выше
+                                noise_floor = noise_floor * 0.94 + min(rms, 0.080) * 0.06
+                                current_threshold = min(0.090, max(0.026, noise_floor * 1.5))
+                            else:
+                                # В тишине микрофон сверхчувствителен для тихих команд
+                                noise_floor = noise_floor * 0.96 + min(rms, 0.035) * 0.04
+                                current_threshold = min(0.040, max(base_threshold, noise_floor * 2.0))
                         else:
-                            current_threshold = min(0.035, max(base_threshold, noise_floor * 1.5))
+                            current_threshold = min(0.075 if music_active else 0.035, max(base_threshold, noise_floor * 1.3))
 
                         if rms > current_threshold:
                             if not is_recording:

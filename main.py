@@ -117,14 +117,18 @@ def main():
             console.print("[bold yellow][~] [Распознавание речи...][/bold yellow]")
 
     def on_speech_start():
-        if player.is_playing:
-            player.duck(True)
+        # Не приглушаем музыку по голому RMS шума,
+        # чтобы вокал и биты из колонок не вызывали пульсирующий дакинг
+        pass
 
     def on_speech_end(recognized: bool):
-        if not recognized and player.is_playing:
-            player.duck(False)
+        pass
 
     def on_voice_command(cmd_text: str, raw_text: str):
+        # Только когда Whisper действительно распознал фразу с триггером («Морсик») —
+        # приглушаем музыку для комфортного выполнения команды и ответа
+        if player.is_playing:
+            player.duck(True)
         cmd_queue.put(("VOICE", cmd_text, raw_text))
 
     def on_voice_log(msg: str):
@@ -136,7 +140,8 @@ def main():
         on_status=on_voice_status,
         on_speech_start=on_speech_start,
         on_speech_end=on_speech_end,
-        on_log=on_voice_log
+        on_log=on_voice_log,
+        is_music_playing=lambda: player.is_playing
     )
     voice_listener.start()
 

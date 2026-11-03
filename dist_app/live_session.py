@@ -115,10 +115,9 @@ class LiveSessionManager:
         self.should_exit = False
         self.last_speech_time = time.time()
 
-        # Приглушаем музыку до 10%
-        was_playing = self.player.is_playing
-        if was_playing:
-            self.player.duck(True)
+        # При начале живого разговора ставим музыку на плавную паузу,
+        # чтобы вокал и биты из колонок не попадали в микрофон и не перебивали речь пользователя
+        was_playing = self.player.fade_out_pause(duration=0.4) if self.player else False
 
         voice_display = f"{self.selected_voice} (авто-пол под {self.config.voice})"
         banner = (
@@ -232,9 +231,9 @@ class LiveSessionManager:
             LiveSessionManager._last_session_time = time.time()
             log_info("Live-сессия завершена")
 
-            # Плавно восстанавливаем музыку
-            if was_playing:
-                self.player.duck(False)
+            # Плавно возобновляем музыку с того же места
+            if was_playing and self.player:
+                self.player.fade_in_resume(duration=0.5)
             
             self.console.print("[dim]Выход из Live-режима. Ассистент снова слушает обычные команды.[/dim]\n")
 
@@ -336,7 +335,7 @@ class LiveSessionManager:
                     continue
 
                 # 2. Ассистент молчит — обычный чувствительный VAD пользователя
-                speech_threshold = 0.010
+                speech_threshold = 0.014
                 barge_in_blocks = 0
 
                 if not is_user_speaking:
