@@ -36,6 +36,11 @@ try:
 except ImportError:
     get_vad_model = None
 
+try:
+    from voice import is_whisper_hallucination
+except ImportError:
+    is_whisper_hallucination = lambda t: False
+
 # Доступные проверенные голоса в Gemini Live API
 LIVE_VOICES = {
     "aoede": "Aoede",      # Тёплый выразительный женский голос
@@ -424,9 +429,23 @@ class LiveSessionManager:
                                             language="ru",
                                             beam_size=1,
                                             vad_filter=True,
-                                            vad_parameters=dict(threshold=0.5, min_silence_duration_ms=250)
+                                            vad_parameters=dict(threshold=0.5, min_silence_duration_ms=250),
+                                            no_speech_threshold=0.45,
+                                            log_prob_threshold=-0.85,
+                                            compression_ratio_threshold=2.2
                                         )
-                                        user_text = " ".join([s.text for s in segments]).strip()
+                                        clean_segments = []
+                                        for s in segments:
+                                            if s.no_speech_prob > 0.45 or s.avg_logprob < -0.85:
+                                                continue
+                                            clean_segments.append(s.text)
+                                        raw_user_text = " ".join(clean_segments).strip()
+                                        if raw_user_text and not is_whisper_hallucination(raw_user_text):
+                                            user_text = raw_user_text
+                                        else:
+                                            if raw_user_text:
+                                                log_info(f"Live-режим: отфильтрована галлюцинация Whisper: '{raw_user_text}'")
+                                            user_text = ""
                                 except Exception as e:
                                     log_warning(f"Ошибка транскрибации речи пользователя: {e}")
 

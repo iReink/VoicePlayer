@@ -53,6 +53,47 @@ RESERVED_COMMAND_WORDS = {
     'хватит', 'слушай', 'песня', 'трек', 'музыка', 'плейлист', 'волна', 'stop', 'pause', 'play'
 }
 
+WHISPER_HALLUCINATION_PATTERNS = [
+    r'субтитр',
+    r'редактор\s+субтитр',
+    r'бойков[аеу]',
+    r'переводчик',
+    r'перевод\s+и\s+озвучк',
+    r'озвучен[оа]',
+    r'dimatorzok',
+    r'спасибо\s+за\s+(?:просмотр|внимание)',
+    r'ставит?е?\s+лайк',
+    r'подписывайтесь',
+    r'продолжение\s+следует',
+    r'до\s+(?:скорых?|новых)\s+встреч',
+    r'до\s+свидания',
+    r'всем\s+пока',
+    r'конец\s+фильма',
+    r'популярные\s+артисты',
+    r'^команды[\.\s]*$',
+]
+
+def is_whisper_hallucination(text: str) -> bool:
+    """
+    Проверяет, является ли распознанный текст типичной галлюцинацией Whisper
+    (субтитры из обучающего датасета YouTube/фильмов или артефакты тишины/эха)
+    """
+    if not text:
+        return True
+    t = text.lower().strip()
+    
+    # 1. Проверка по шаблонам субтитров и титров
+    for pattern in WHISPER_HALLUCINATION_PATTERNS:
+        if re.search(pattern, t):
+            return True
+            
+    # 2. Повторяющиеся бессмысленные слова-зацикливания Whisper ("дальше дальше дальше")
+    words = t.split()
+    if len(words) >= 3 and len(set(words)) == 1:
+        return True
+        
+    return False
+
 def longest_common_substring(s1: str, s2: str) -> int:
     """Возвращает длину наибольшей непрерывной общей подстроки между двумя строками"""
     return SequenceMatcher(None, s1, s2).find_longest_match(0, len(s1), 0, len(s2)).size
@@ -372,15 +413,8 @@ class VoiceListener:
         """Распознавание сегмента речи через Whisper с подробным логированием"""
         current_trigger = self.config.trigger
         
-        initial_prompt = (
-            f"Голосовой ассистент Яндекс Музыки. Триггер {current_trigger}. "
-            "Популярные артисты: Queen, twenty one pilots, Imagine Dragons, Linkin Park, "
-            "The Beatles, Metallica, Nirvana, Eminem, Billie Eilish, AC/DC, Rammstein, "
-            "Red Hot Chili Peppers, Green Day, Coldplay, Depeche Mode, Michael Jackson. "
-            "Команды: включи мой плейлист, включи трек, включи исполнителя, включи альбом, "
-            "моя волна, плейлист дня, дежавю, премьера, тайник, любимые треки, "
-            "пауза, стоп, дальше, назад, громче, тише, какой сейчас триггер."
-        )
+        # Лаконичный промпт: предотвращает самоцитирование каталога исполнителей и команд
+        initial_prompt = f"Голосовой ассистент Яндекс Музыки. Активационная фраза: {current_trigger}."
 
         t_start = time.time()
         try:
@@ -390,9 +424,18 @@ class VoiceListener:
                 initial_prompt=initial_prompt,
                 condition_on_previous_text=False,
                 vad_filter=True,
-                vad_parameters=dict(threshold=0.5, min_silence_duration_ms=300)
+                vad_parameters=dict(threshold=0.5, min_silence_duration_ms=300),
+                no_speech_threshold=0.45,
+                log_prob_threshold=-0.85,
+                compression_ratio_threshold=2.2
             )
-            raw_text = "".join([s.text for s in segments]).strip()
+            
+            clean_segments = []
+            for s in segments:
+                if s.no_speech_prob > 0.45 or s.avg_logprob < -0.85:
+                    continue
+                clean_segments.append(s.text)
+            raw_text = "".join(clean_segments).strip()
         except Exception as e:
             log_error(f"Ошибка выполнения model.transcribe: {e}")
             return False
@@ -401,12 +444,17 @@ class VoiceListener:
         log_info(f"Whisper распознал за {t_elapsed:.3f} сек: '{raw_text}'")
 
         if not raw_text or len(raw_text) < 2:
-            log_debug("Текст пустой или слишком короткий")
+            log_debug("Текст пустой или отсечён фильтром тишины")
             return False
 
         # Очищаем текст от знаков препинания по краям
         clean_raw = re.sub(r'^[^\w\s]+|[^\w\s]+$', '', raw_text).strip()
         text_lower = clean_raw.lower()
+
+        # Фильтрация типичных галлюцинаций Whisper (субтитры, артефакты тишины)
+        if is_whisper_hallucination(clean_raw):
+            log_info(f"Отфильтрована галлюцинация Whisper: '{clean_raw}'")
+            return False
 
         # 0. Режим прямого ответа без триггера (например, голосовое меню выбора)
         if self._force_command_mode:
