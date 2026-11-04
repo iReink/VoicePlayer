@@ -23,6 +23,7 @@ models/
 dist_app/models/
 *.pt
 *.bin
+!kws_polygon/models/
 
 # Build & Installer output
 installer_output/
