@@ -314,36 +314,56 @@ function displayPredictions(results) {
 }
 
 // 7. USER VALIDATION (GROUND TRUTH CONFIRMATION)
-valButtons.forEach(btn => {
-    btn.addEventListener('click', async () => {
-        if (!currentAudioId) return;
+async function submitValidation(label, targetBtn = null) {
+    if (!currentAudioId) {
+        valStatusText.textContent = "⚠️ Сначала запишите звук (удерживайте Пробел)";
+        return;
+    }
+    if (isRecording) {
+        valStatusText.textContent = "⏳ Дождитесь окончания записи";
+        return;
+    }
 
-        const label = btn.getAttribute('data-label');
-        valButtons.forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
+    const btn = targetBtn || document.querySelector(`.btn-val[data-label="${label}"]`);
+    valButtons.forEach(b => b.classList.remove('selected'));
+    if (btn) btn.classList.add('selected');
 
-        valStatusText.textContent = "Сохранение эталона...";
+    valStatusText.textContent = "Сохранение эталона...";
 
-        try {
-            const resp = await fetch('/api/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    audio_id: currentAudioId,
-                    label: label
-                })
-            });
-            const data = await resp.json();
+    try {
+        const resp = await fetch('/api/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                audio_id: currentAudioId,
+                label: label
+            })
+        });
+        const data = await resp.json();
 
-            if (data.status === 'ok') {
-                applyValidationFeedback(data.evaluation, label);
-                valStatusText.textContent = "✅ Эталон учтён! Сэмпл сохранён для дообучения.";
-                loadStats(); // Обновляем статистику
-            }
-        } catch (err) {
-            console.error("Validate error:", err);
-            valStatusText.textContent = "Ошибка сохранения валидации";
+        if (data.status === 'ok') {
+            applyValidationFeedback(data.evaluation, label);
+            const labelNames = {
+                morsik: '«Морсик»',
+                karlusha: '«Карлуша»',
+                hey_wisp: '«Эй, Висп!»',
+                negative: 'Ошибка / Шум'
+            };
+            valStatusText.textContent = `✅ Учтено: ${labelNames[label] || label}! Сэмпл сохранён.`;
+            loadStats(); // Обновляем статистику
+        } else {
+            valStatusText.textContent = "Ошибка: " + (data.error || "Не удалось сохранить");
         }
+    } catch (err) {
+        console.error("Validate error:", err);
+        valStatusText.textContent = "Ошибка сохранения валидации";
+    }
+}
+
+valButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const label = btn.getAttribute('data-label');
+        submitValidation(label, btn);
     });
 });
 
@@ -384,10 +404,25 @@ function resetCardVisuals() {
     }
 }
 
-// 8. PUSH-TO-TALK LISTENERS (SPACEBAR & BUTTON)
+// Карта хоткеев валидации: 1, 2, 3, 4 (как стандартные цифры, так и Numpad)
+const VALIDATION_HOTKEYS = {
+    'Digit1': 'morsik',
+    'Numpad1': 'morsik',
+    'Digit2': 'karlusha',
+    'Numpad2': 'karlusha',
+    'Digit3': 'hey_wisp',
+    'Numpad3': 'hey_wisp',
+    'Digit4': 'negative',
+    'Numpad4': 'negative'
+};
+
+// 8. KEYBOARD LISTENERS (SPACEBAR & HOTKEYS 1-4)
 window.addEventListener('keydown', (e) => {
+    // Игнорируем ввод, если фокус в поле формы
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+    // 1. Пробел -> Push-to-Talk
     if (e.code === 'Space') {
-        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
         if (e.repeat) {
             e.preventDefault();
             return;
@@ -396,6 +431,30 @@ window.addEventListener('keydown', (e) => {
             e.preventDefault();
             spaceKeyLocked = true;
             startRecording();
+        }
+        return;
+    }
+
+    // 2. Хоткеи 1, 2, 3, 4 для валидации (Digit и Numpad)
+    let label = VALIDATION_HOTKEYS[e.code];
+    if (!label) {
+        // Fallback по символу клавиши
+        if (e.key === '1') label = 'morsik';
+        else if (e.key === '2') label = 'karlusha';
+        else if (e.key === '3') label = 'hey_wisp';
+        else if (e.key === '4') label = 'negative';
+    }
+
+    if (label) {
+        e.preventDefault();
+        const btn = document.querySelector(`.btn-val[data-label="${label}"]`);
+        if (btn && !btn.disabled) {
+            // Анимация нажатия клавиши на кнопке
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 150);
+            submitValidation(label, btn);
+        } else if (!currentAudioId) {
+            valStatusText.textContent = "⚠️ Сначала запишите звук (удерживайте Пробел)";
         }
     }
 });

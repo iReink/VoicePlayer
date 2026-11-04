@@ -470,9 +470,42 @@ body {
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     transition: all 0.15s;
     text-align: left;
+}
+
+.val-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.key-hint {
+    background: #111827;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 700;
+    color: var(--text-secondary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    transition: all 0.15s;
+}
+
+.btn-val:hover:not(:disabled) .key-hint,
+.btn-val.selected .key-hint {
+    border-color: var(--accent-blue);
+    color: #fff;
+    background: rgba(56, 139, 253, 0.25);
+}
+
+.btn-val.active {
+    transform: scale(0.97);
+    filter: brightness(1.25);
 }
 
 .btn-val:hover:not(:disabled) {
