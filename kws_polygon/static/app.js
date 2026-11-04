@@ -553,6 +553,30 @@ async function loadStats() {
     }
 }
 
+// 10.1 RESET STATS BUTTON
+const btnResetStats = document.getElementById('btnResetStats');
+if (btnResetStats) {
+    btnResetStats.addEventListener('click', async () => {
+        if (!confirm("Сбросить накопленную статистику испытаний?\n\nСчётчики проверок и матрица ошибок очистятся, чтобы оценивать новые версии моделей с чистого листа.\n\nВсе физические аудиосэмплы для дообучения останутся в сохранности!")) {
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/reset_stats', { method: 'POST' });
+            const data = await resp.json();
+            if (data.status === 'ok') {
+                await loadStats();
+                alert("✅ Статистика сброшена! Предыдущая сессия заархивирована, а накопленные аудиосэмплы сохранены.");
+            } else {
+                alert("❌ Ошибка сброса: " + (data.error || "Неизвестная ошибка"));
+            }
+        } catch (err) {
+            console.error("Reset stats error:", err);
+            alert("❌ Сбой сети при сбросе статистики");
+        }
+    });
+}
+
 // 11. RE-TRAINING & HISTORY
 async function loadTrainingHistory() {
     try {

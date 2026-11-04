@@ -355,6 +355,48 @@ async def handle_stats(request):
         "total_user_samples": sum(sample_counts.values())
     })
 
+async def handle_reset_stats(request):
+    """
+    Сбрасывает историю испытаний (samples_db.json), архивируя её,
+    но оставляет физические аудиосэмплы в папке samples/ для дообучения.
+    """
+    try:
+        if SAMPLES_DB_FILE.exists():
+            archive_file = BASE_DIR / "samples_db_archive.json"
+            try:
+                with open(SAMPLES_DB_FILE, "r", encoding="utf-8") as f:
+                    current_entries = json.load(f)
+            except Exception:
+                current_entries = []
+
+            if current_entries:
+                existing_archive = []
+                if archive_file.exists():
+                    try:
+                        with open(archive_file, "r", encoding="utf-8") as f:
+                            existing_archive = json.load(f)
+                    except Exception:
+                        existing_archive = []
+                
+                existing_archive.append({
+                    "archived_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "total_entries": len(current_entries),
+                    "entries": current_entries
+                })
+                with open(archive_file, "w", encoding="utf-8") as f:
+                    json.dump(existing_archive, f, ensure_ascii=False, indent=2)
+
+            with open(SAMPLES_DB_FILE, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
+
+        return web.json_response({
+            "status": "ok",
+            "message": "Статистика успешно сброшена. Накопленные сэмплы для дообучения сохранены."
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return web.json_response({"status": "error", "error": str(e)}, status=500)
+
 async def handle_retrain(request):
     """Запускает дообучение на накопленных сэмплах и перезагружает модели в память"""
     try:
@@ -385,6 +427,7 @@ def create_app():
     app.router.add_post('/api/predict', handle_predict)
     app.router.add_post('/api/validate', handle_validate)
     app.router.add_get('/api/stats', handle_stats)
+    app.router.add_post('/api/reset_stats', handle_reset_stats)
     app.router.add_post('/api/retrain', handle_retrain)
     app.router.add_get('/api/train_history', handle_train_history)
     app.router.add_static('/static', path=str(BASE_DIR / 'static'), name='static')

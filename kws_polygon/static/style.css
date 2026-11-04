@@ -575,6 +575,11 @@ body {
 }
 
 .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
     margin-bottom: 16px;
 }
 
@@ -586,6 +591,27 @@ body {
 .table-hint {
     font-size: 13px;
     color: var(--text-secondary);
+}
+
+.btn-reset-stats {
+    background: rgba(248, 81, 73, 0.12);
+    border: 1px solid rgba(248, 81, 73, 0.35);
+    color: #f85149;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-reset-stats:hover {
+    background: rgba(248, 81, 73, 0.25);
+    border-color: #f85149;
+    transform: translateY(-1px);
 }
 
 .table-responsive {

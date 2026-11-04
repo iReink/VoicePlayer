@@ -1,5 +1,67 @@
 [
   {
+    "timestamp": "2026-11-04 06:49:41",
+    "type": "Дообучение (Fine-tune)",
+    "user_samples_count": 90,
+    "results": {
+      "morsik": {
+        "name": "Морсик",
+        "accuracy": 98.0,
+        "final_loss": 0.025,
+        "avg_pos": 0.983,
+        "avg_neg": 0.059,
+        "file": "morsik.onnx"
+      },
+      "karlusha": {
+        "name": "Карлуша",
+        "accuracy": 100.0,
+        "final_loss": 0.0161,
+        "avg_pos": 0.998,
+        "avg_neg": 0.007,
+        "file": "karlusha.onnx"
+      },
+      "hey_wisp": {
+        "name": "Эй, Висп!",
+        "accuracy": 99.0,
+        "final_loss": 0.0169,
+        "avg_pos": 0.92,
+        "avg_neg": 0.0,
+        "file": "hey_wisp.onnx"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-11-04 06:41:45",
+    "type": "Дообучение (Fine-tune)",
+    "user_samples_count": 53,
+    "results": {
+      "morsik": {
+        "name": "Морсик",
+        "accuracy": 62.0,
+        "final_loss": 0.0414,
+        "avg_pos": 1.0,
+        "avg_neg": 0.752,
+        "file": "morsik.onnx"
+      },
+      "karlusha": {
+        "name": "Карлуша",
+        "accuracy": 93.0,
+        "final_loss": 0.0237,
+        "avg_pos": 0.998,
+        "avg_neg": 0.131,
+        "file": "karlusha.onnx"
+      },
+      "hey_wisp": {
+        "name": "Эй, Висп!",
+        "accuracy": 100.0,
+        "final_loss": 0.0207,
+        "avg_pos": 0.998,
+        "avg_neg": 0.0,
+        "file": "hey_wisp.onnx"
+      }
+    }
+  },
+  {
     "timestamp": "2026-11-04 06:00:21",
     "type": "Первичное обучение (Cold Train)",
     "user_samples_count": 0,

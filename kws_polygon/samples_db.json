@@ -1,0 +1,2666 @@
+[
+  {
+    "audio_id": "20261104_062435_5110",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:24:48",
+    "results": {
+      "morsik": 0.5224,
+      "karlusha": 0.0178,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062507_7300",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:25:18",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.099,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062524_4345",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:25:36",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.6089,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062623_3170",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:26:28",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.22,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062632_2586",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:26:36",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.8028,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062641_1058",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:26:42",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 1.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062645_5840",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:26:50",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062707_7189",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:27:10",
+    "results": {
+      "morsik": 0.164,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062712_2871",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:27:15",
+    "results": {
+      "morsik": 0.0002,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0002
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062743_3454",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:27:45",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0396,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062747_7776",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:27:51",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9999
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062847_7422",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:28:50",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.2734,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062854_4599",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:29:00",
+    "results": {
+      "morsik": 0.002,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_062904_4756",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:29:13",
+    "results": {
+      "morsik": 0.0006,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063014_4256",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:30:16",
+    "results": {
+      "morsik": 0.0024,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063019_9021",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:30:20",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.1216,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063022_2390",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:30:23",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9997
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063026_6073",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:30:26",
+    "results": {
+      "morsik": 0.0019,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063028_8752",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:30:29",
+    "results": {
+      "morsik": 0.0005,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063032_2304",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:30:34",
+    "results": {
+      "morsik": 0.0007,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063049_9887",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:30:53",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0008
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063058_8410",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:00",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063102_2545",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:03",
+    "results": {
+      "morsik": 0.0002,
+      "karlusha": 0.0001,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063107_7630",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:09",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0004,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063113_3496",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:14",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063118_8668",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:19",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.2369
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063126_6281",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:27",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063132_2720",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:31:34",
+    "results": {
+      "morsik": 0.0004,
+      "karlusha": 0.0002,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063309_9701",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:33:11",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.991
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063314_4379",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:33:16",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.017
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": false,
+        "type": "FN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063319_9706",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:33:20",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9956
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063324_4370",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:33:26",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063328_8228",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:33:29",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0897,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063331_1543",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:33:33",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.096,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063335_5052",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:33:38",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063339_9875",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:33:41",
+    "results": {
+      "morsik": 0.0111,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063344_4953",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:33:45",
+    "results": {
+      "morsik": 0.0003,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063508_8693",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:35:14",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9998
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063520_610",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:35:34",
+    "results": {
+      "morsik": 0.001,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0375
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063540_593",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:35:49",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063553_3432",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:36:03",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.9045,
+      "hey_wisp": 0.0002
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063607_7804",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:36:12",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.3723,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063616_6579",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:36:25",
+    "results": {
+      "morsik": 0.0003,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0003
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063628_8764",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:36:32",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9997
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063735_5817",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:37:40",
+    "results": {
+      "morsik": 0.0008,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063742_2505",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:37:49",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.001,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063759_9602",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:38:00",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9999
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063803_3541",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:38:06",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0002
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063808_8912",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:38:10",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0034
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063812_2519",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:38:13",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9968
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063815_5847",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:38:17",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063821_1435",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:38:23",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0017,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_063830_255",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:38:36",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064307_7760",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:43:10",
+    "results": {
+      "morsik": 1.0,
+      "karlusha": 0.0018,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064313_3067",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:43:14",
+    "results": {
+      "morsik": 0.0647,
+      "karlusha": 0.9987,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064316_6069",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:43:17",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9995
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064319_9514",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:43:20",
+    "results": {
+      "morsik": 0.9999,
+      "karlusha": 0.0041,
+      "hey_wisp": 0.001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064322_2138",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:43:22",
+    "results": {
+      "morsik": 0.0112,
+      "karlusha": 0.8798,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064325_5924",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:43:26",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0003,
+      "hey_wisp": 0.9967
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064329_9876",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:44:06",
+    "results": {
+      "morsik": 0.9963,
+      "karlusha": 0.0003,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064455_5757",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:45:00",
+    "results": {
+      "morsik": 0.9968,
+      "karlusha": 0.261,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064505_5506",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:45:07",
+    "results": {
+      "morsik": 0.0325,
+      "karlusha": 0.9931,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064512_2236",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:45:14",
+    "results": {
+      "morsik": 0.0187,
+      "karlusha": 0.2254,
+      "hey_wisp": 0.0569
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064517_7230",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:45:18",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0376,
+      "hey_wisp": 0.9981
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064522_2172",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:45:24",
+    "results": {
+      "morsik": 0.9973,
+      "karlusha": 0.0001,
+      "hey_wisp": 0.0116
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064526_6961",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:45:29",
+    "results": {
+      "morsik": 0.3979,
+      "karlusha": 0.0002,
+      "hey_wisp": 0.0747
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064538_8353",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:45:40",
+    "results": {
+      "morsik": 0.0069,
+      "karlusha": 0.0,
+      "hey_wisp": 0.0622
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064546_6512",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:45:49",
+    "results": {
+      "morsik": 0.9998,
+      "karlusha": 0.0178,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064601_1187",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:46:03",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.9654,
+      "hey_wisp": 0.0796
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064609_9406",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:46:13",
+    "results": {
+      "morsik": 0.9999,
+      "karlusha": 0.9987,
+      "hey_wisp": 0.0002
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064615_5762",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:46:17",
+    "results": {
+      "morsik": 0.8891,
+      "karlusha": 0.1218,
+      "hey_wisp": 0.4868
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064619_9769",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:46:20",
+    "results": {
+      "morsik": 1.0,
+      "karlusha": 0.0638,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064623_3142",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:46:25",
+    "results": {
+      "morsik": 0.9999,
+      "karlusha": 0.0319,
+      "hey_wisp": 0.0004
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064627_7469",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:46:30",
+    "results": {
+      "morsik": 1.0,
+      "karlusha": 0.0003,
+      "hey_wisp": 0.0037
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064631_1901",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:46:33",
+    "results": {
+      "morsik": 0.9995,
+      "karlusha": 0.1913,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064635_5393",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:46:36",
+    "results": {
+      "morsik": 0.8975,
+      "karlusha": 0.9053,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064640_401",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:46:41",
+    "results": {
+      "morsik": 0.0037,
+      "karlusha": 0.9998,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064643_3518",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:46:44",
+    "results": {
+      "morsik": 0.0009,
+      "karlusha": 0.9998,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064647_7464",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:46:48",
+    "results": {
+      "morsik": 0.0114,
+      "karlusha": 0.9969,
+      "hey_wisp": 0.0013
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064650_579",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:46:53",
+    "results": {
+      "morsik": 0.8505,
+      "karlusha": 0.9684,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064655_5986",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:46:57",
+    "results": {
+      "morsik": 0.9308,
+      "karlusha": 0.9994,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064658_8929",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:47:00",
+    "results": {
+      "morsik": 0.4333,
+      "karlusha": 0.8855,
+      "hey_wisp": 0.0002
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064702_2569",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:04",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0001,
+      "hey_wisp": 0.9998
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064707_7261",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:08",
+    "results": {
+      "morsik": 0.0193,
+      "karlusha": 0.0003,
+      "hey_wisp": 0.998
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064712_2093",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:13",
+    "results": {
+      "morsik": 0.0031,
+      "karlusha": 0.0012,
+      "hey_wisp": 0.9992
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064721_1368",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:22",
+    "results": {
+      "morsik": 0.0003,
+      "karlusha": 0.0,
+      "hey_wisp": 0.999
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064725_5813",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:26",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9991
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064728_8377",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:30",
+    "results": {
+      "morsik": 0.9846,
+      "karlusha": 0.0,
+      "hey_wisp": 0.7088
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064732_2000",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:47:32",
+    "results": {
+      "morsik": 0.8626,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9798
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_064734_4466",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:47:35",
+    "results": {
+      "morsik": 0.9967,
+      "karlusha": 0.0001,
+      "hey_wisp": 0.0012
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": false,
+        "type": "FP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065036_6032",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:50:36",
+    "results": {
+      "morsik": 0.9956,
+      "karlusha": 0.0002,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065039_9650",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:50:41",
+    "results": {
+      "morsik": 0.1562,
+      "karlusha": 0.001,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065044_4853",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:50:46",
+    "results": {
+      "morsik": 0.0905,
+      "karlusha": 0.0004,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065053_3081",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:50:55",
+    "results": {
+      "morsik": 0.0092,
+      "karlusha": 0.9827,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065057_7917",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:50:59",
+    "results": {
+      "morsik": 0.0078,
+      "karlusha": 0.0256,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065107_7286",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:08",
+    "results": {
+      "morsik": 0.0027,
+      "karlusha": 0.0004,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065110_643",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:51:11",
+    "results": {
+      "morsik": 0.9232,
+      "karlusha": 0.0003,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065113_3150",
+    "label": "morsik",
+    "timestamp": "2026-11-04 06:51:15",
+    "results": {
+      "morsik": 0.8808,
+      "karlusha": 0.0006,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TP"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065117_7988",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:51:18",
+    "results": {
+      "morsik": 0.0019,
+      "karlusha": 0.9207,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065120_525",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:22",
+    "results": {
+      "morsik": 0.0001,
+      "karlusha": 0.2696,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065124_4842",
+    "label": "karlusha",
+    "timestamp": "2026-11-04 06:51:25",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.9965,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065128_8503",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:51:29",
+    "results": {
+      "morsik": 0.0006,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9294
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065130_902",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:51:31",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0004,
+      "hey_wisp": 0.9956
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065133_3448",
+    "label": "hey_wisp",
+    "timestamp": "2026-11-04 06:51:34",
+    "results": {
+      "morsik": 0.0,
+      "karlusha": 0.0,
+      "hey_wisp": 0.9966
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TP"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065136_6709",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:38",
+    "results": {
+      "morsik": 0.2312,
+      "karlusha": 0.0002,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065140_349",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:41",
+    "results": {
+      "morsik": 0.1327,
+      "karlusha": 0.0037,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065145_5189",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:47",
+    "results": {
+      "morsik": 0.0009,
+      "karlusha": 0.6857,
+      "hey_wisp": 0.0002
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065150_994",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:51",
+    "results": {
+      "morsik": 0.0412,
+      "karlusha": 0.1117,
+      "hey_wisp": 0.0001
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065155_5642",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:51:56",
+    "results": {
+      "morsik": 0.0007,
+      "karlusha": 0.986,
+      "hey_wisp": 0.0012
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065201_1115",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:52:02",
+    "results": {
+      "morsik": 0.0183,
+      "karlusha": 0.0416,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": true,
+        "type": "TN"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  },
+  {
+    "audio_id": "20261104_065210_834",
+    "label": "negative",
+    "timestamp": "2026-11-04 06:52:11",
+    "results": {
+      "morsik": 0.0004,
+      "karlusha": 0.9836,
+      "hey_wisp": 0.0
+    },
+    "evaluation": {
+      "morsik": {
+        "correct": true,
+        "type": "TN"
+      },
+      "karlusha": {
+        "correct": false,
+        "type": "FP"
+      },
+      "hey_wisp": {
+        "correct": true,
+        "type": "TN"
+      }
+    }
+  }
+]
