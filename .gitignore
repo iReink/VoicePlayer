@@ -19,7 +19,9 @@ assistant.log
 Logs/
 
 # Downloaded AI Models (large binaries)
-models/
+models/*
+!models/kws/
+!models/kws/**
 dist_app/models/
 *.pt
 *.bin

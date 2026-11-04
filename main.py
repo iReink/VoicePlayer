@@ -116,17 +116,24 @@ def main():
         elif status == "TRANSCRIBING":
             console.print("[bold yellow][~] [Распознавание речи...][/bold yellow]")
 
+    def on_wake_word(model_name: str):
+        names = {
+            "morsik": "🐾 «Морсик»",
+            "karlusha": "🦅 «Карлуша»",
+            "hey_wisp": "⚡ «Эй, Висп!»"
+        }
+        pretty_name = names.get(model_name, f"«{model_name}»")
+        console.print(f"[bold cyan]🔔 [KWS Активация: {pretty_name}][/bold cyan]")
+        player.duck(True)
+
     def on_speech_start():
-        # Не приглушаем музыку по голому RMS шума,
-        # чтобы вокал и биты из колонок не вызывали пульсирующий дакинг
-        pass
+        player.duck(True)
 
     def on_speech_end(recognized: bool):
-        pass
+        if not recognized:
+            player.duck(False)
 
     def on_voice_command(cmd_text: str, raw_text: str):
-        # Дакинг выполняется непосредственно в tts.say при ответе,
-        # чтобы музыка не приглушалась вхолостую при паузах, остановках и меню
         cmd_queue.put(("VOICE", cmd_text, raw_text))
 
     def on_voice_log(msg: str):
@@ -139,7 +146,8 @@ def main():
         on_speech_start=on_speech_start,
         on_speech_end=on_speech_end,
         on_log=on_voice_log,
-        is_music_playing=lambda: player.is_playing
+        is_music_playing=lambda: player.is_playing,
+        on_wake_word=on_wake_word
     )
     voice_listener.start()
 

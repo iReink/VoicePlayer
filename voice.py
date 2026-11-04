@@ -6,6 +6,7 @@ import sys
 import re
 import time
 import threading
+import collections
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional, Callable, Tuple
@@ -19,6 +20,7 @@ except ImportError:
     get_vad_model = None
 
 from logger import log_debug, log_info, log_warning, log_error
+from kws_engine import KWSEngine, play_wake_chime_async
 
 MODEL_DIR = Path(__file__).parent / "models" / "whisper-small"
 
@@ -174,7 +176,8 @@ class VoiceListener:
         on_speech_start: Optional[Callable[[], None]] = None,
         on_speech_end: Optional[Callable[[bool], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
-        is_music_playing: Optional[Callable[[], bool]] = None
+        is_music_playing: Optional[Callable[[], bool]] = None,
+        on_wake_word: Optional[Callable[[str], None]] = None
     ):
         self.config = config_manager
         self.on_command = on_command
@@ -183,6 +186,9 @@ class VoiceListener:
         self.on_speech_end = on_speech_end
         self.on_log = on_log
         self.is_music_playing = is_music_playing
+        self.on_wake_word = on_wake_word
+
+        self.kws_engine = KWSEngine(threshold=0.80)
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -293,11 +299,18 @@ class VoiceListener:
             try:
                 log_debug("Открытие аудиопотока микрофона...")
                 with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32', blocksize=block_size) as stream:
+                    # Кольцевой буфер KWS: 1.5 сек (24 блока по 1024 сэмпла)
+                    ring_buffer_blocks = int(1.5 * sample_rate / block_size)
+                    kws_ring_buffer = collections.deque(maxlen=ring_buffer_blocks)
+                    blocks_since_kws = 0
+                    is_kws_command = False
+                    kws_trigger_name = None
+
                     audio_buffer = []
                     is_recording = False
                     silence_blocks = 0
                     noise_floor = 0.005
-                    log_info("Аудиопоток микрофона открыт и слушает")
+                    log_info(f"Аудиопоток микрофона открыт и слушает (KWS активен: {self.kws_engine.has_models})")
 
                     while self._running and not self._is_paused:
                         block, overflowed = stream.read(block_size)
@@ -305,6 +318,7 @@ class VoiceListener:
                             is_recording = False
                             audio_buffer = []
                             silence_blocks = 0
+                            kws_ring_buffer.clear()
                             continue
 
                         now = time.time()
@@ -320,7 +334,7 @@ class VoiceListener:
 
                         # Оценка вероятности речи нейросетью Silero VAD
                         vad_prob = 0.0
-                        if vad_model is not None and rms > 0.006:
+                        if vad_model is not None and rms > 0.005:
                             try:
                                 vad_res = vad_model(block_flat)
                                 vad_prob = float(np.max(vad_res))
@@ -331,46 +345,75 @@ class VoiceListener:
                         if not is_recording:
                             noise_floor = noise_floor * 0.96 + min(rms, 0.050) * 0.04
 
-                        # Проверка речевой активности
-                        if vad_model is not None:
-                            # Silero VAD:
-                            # Вентиляторы/гул/эхо выдают prob ~0.02-0.05 даже при высоком RMS.
-                            # Человеческий голос выдает prob >= 0.50..0.95.
-                            if not is_recording:
-                                if music_active:
-                                    min_prob = 0.70 if consecutive_unrecognized >= 2 else 0.62
-                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.022)
-                                else:
-                                    min_prob = 0.65 if consecutive_unrecognized >= 3 else 0.50
-                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.008)
-                            else:
-                                if music_active:
-                                    is_voice = (vad_prob >= 0.35) or (vad_prob >= 0.20 and rms >= 0.025)
-                                else:
-                                    is_voice = (vad_prob >= 0.25) or (vad_prob >= 0.15 and rms >= 0.010)
-                        else:
-                            # Fallback: адаптивный RMS без жесткого верхнего лимита
-                            threshold = max(0.015, noise_floor * (2.2 if music_active else 2.5))
-                            is_voice = rms > threshold
+                        use_kws = self.kws_engine.has_models and not self._force_command_mode
 
-                        if is_voice:
-                            if not is_recording:
-                                is_recording = True
-                                silence_blocks = 0
-                                audio_buffer = [block_flat.copy()]
-                                log_debug(f"Начало речи (RMS={rms:.4f}, VAD={vad_prob:.3f})")
-                                self._notify_status("RECORDING")
-                                if self.on_speech_start:
-                                    try:
-                                        self.on_speech_start()
-                                    except Exception:
-                                        pass
+                        if not is_recording:
+                            if use_kws:
+                                # KWS режим: накапливаем скользящее окно 1.5 сек и проверяем каждые 2 блока (~128 мс)
+                                kws_ring_buffer.append(block_flat.copy())
+                                blocks_since_kws += 1
+                                if blocks_since_kws >= 2 and len(kws_ring_buffer) >= (ring_buffer_blocks // 2):
+                                    blocks_since_kws = 0
+                                    window_16k = np.concatenate(list(kws_ring_buffer))
+                                    kws_res = self.kws_engine.process_audio(window_16k)
+                                    if kws_res is not None:
+                                        log_info(f"🔔 KWS обнаружен: «{kws_res.model_name}» ({kws_res.probability*100:.1f}%)")
+                                        kws_trigger_name = kws_res.model_name
+                                        is_kws_command = True
+                                        is_recording = True
+                                        silence_blocks = 0
+
+                                        if self.on_wake_word:
+                                            try:
+                                                self.on_wake_word(kws_res.model_name)
+                                            except Exception:
+                                                pass
+
+                                        play_wake_chime_async()
+
+                                        if self.on_speech_start:
+                                            try:
+                                                self.on_speech_start()
+                                            except Exception:
+                                                pass
+
+                                        # Сохраняем последние 5 блоков (~320 мс) как pre-roll,
+                                        # чтобы не обрезать начало команды при слитном произнесении
+                                        audio_buffer = list(kws_ring_buffer)[-5:]
+                                        self._notify_status("RECORDING")
+                                        continue
                             else:
-                                audio_buffer.append(block_flat.copy())
-                                silence_blocks = 0
+                                # Legacy режим без KWS (или принудительный ввод команды в меню)
+                                if vad_model is not None:
+                                    min_prob = 0.70 if (music_active and consecutive_unrecognized >= 2) else 0.50
+                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.010)
+                                else:
+                                    threshold = max(0.015, noise_floor * (2.2 if music_active else 2.5))
+                                    is_voice = rms > threshold
+
+                                if is_voice:
+                                    is_recording = True
+                                    silence_blocks = 0
+                                    audio_buffer = [block_flat.copy()]
+                                    log_debug(f"Начало речи (RMS={rms:.4f}, VAD={vad_prob:.3f})")
+                                    self._notify_status("RECORDING")
+                                    if self.on_speech_start:
+                                        try:
+                                            self.on_speech_start()
+                                        except Exception:
+                                            pass
                         else:
-                            if is_recording:
-                                audio_buffer.append(block_flat.copy())
+                            # Идёт запись команды
+                            audio_buffer.append(block_flat.copy())
+
+                            if vad_model is not None:
+                                is_voice = (vad_prob >= 0.25) or (rms >= 0.012)
+                            else:
+                                is_voice = rms > max(0.012, noise_floor * 1.5)
+
+                            if is_voice:
+                                silence_blocks = 0
+                            else:
                                 silence_blocks += 1
 
                                 if silence_blocks >= max_silence_blocks or len(audio_buffer) >= max_speech_blocks:
@@ -382,7 +425,7 @@ class VoiceListener:
                                     recognized = False
                                     if len(audio_buffer) >= min_speech_blocks:
                                         audio_data = np.concatenate(audio_buffer, axis=0)
-                                        recognized = self._process_audio(model, audio_data)
+                                        recognized = self._process_audio(model, audio_data, kws_trigger=kws_trigger_name if is_kws_command else None)
                                     else:
                                         log_debug("Слишком короткий сегмент аудио, пропуск")
 
@@ -390,8 +433,7 @@ class VoiceListener:
                                         consecutive_unrecognized = 0
                                     else:
                                         consecutive_unrecognized += 1
-                                        if consecutive_unrecognized >= 3:
-                                            # Защита от бесконечного цикла ложных срабатываний
+                                        if consecutive_unrecognized >= 3 and not use_kws:
                                             backoff_until = time.time() + 0.40
 
                                     if self.on_speech_end:
@@ -403,13 +445,16 @@ class VoiceListener:
                                     self._notify_status("IDLE")
                                     audio_buffer = []
                                     silence_blocks = 0
+                                    is_kws_command = False
+                                    kws_trigger_name = None
+                                    kws_ring_buffer.clear()
 
             except Exception as e:
                 log_error(f"Ошибка в цикле микрофона: {e}")
                 self._notify_status("IDLE")
                 time.sleep(2.0)
 
-    def _process_audio(self, model: WhisperModel, audio_data: np.ndarray) -> bool:
+    def _process_audio(self, model: WhisperModel, audio_data: np.ndarray, kws_trigger: Optional[str] = None) -> bool:
         """Распознавание сегмента речи через Whisper с подробным логированием"""
         current_trigger = self.config.trigger
         
@@ -444,6 +489,11 @@ class VoiceListener:
         log_info(f"Whisper распознал за {t_elapsed:.3f} сек: '{raw_text}'")
 
         if not raw_text or len(raw_text) < 2:
+            if kws_trigger:
+                # Названо только имя триггера ("Морсик" / "Карлуша" / "Эй Висп")
+                log_info(f"Назван только триггер «{kws_trigger}»")
+                self.on_command("триггер_активирован", raw_text)
+                return True
             log_debug("Текст пустой или отсечён фильтром тишины")
             return False
 
@@ -462,17 +512,36 @@ class VoiceListener:
             self.on_command(clean_raw, raw_text)
             return True
 
-        # 1. Запрос «Какой сейчас триггер?» — Wake-word НЕ требуется
+        # 1. Если команда была инициирована KWS детектором:
+        if kws_trigger:
+            cmd_clean = text_lower
+            # Отрезаем триггерное слово в начале, если пользователь произнёс фразу слитно ("Морсик, сделай тише")
+            triggers_to_strip = ["морсик", "карлуша", "эй висп", "висп", "эй"]
+            for trig in triggers_to_strip:
+                if cmd_clean.startswith(trig):
+                    cmd_clean = cmd_clean[len(trig):].strip()
+                    cmd_clean = re.sub(r'^[^\w\s]+', '', cmd_clean).strip()
+                    break
+
+            if not cmd_clean or len(cmd_clean) < 2:
+                log_info(f"Назван только триггер «{kws_trigger}»")
+                self.on_command("триггер_активирован", raw_text)
+                return True
+
+            log_info(f"Передача KWS-команды в обработчик: '{cmd_clean}' (raw: '{raw_text}', trigger: '{kws_trigger}')")
+            self.on_command(cmd_clean, raw_text)
+            return True
+
+        # 2. Запрос «Какой сейчас триггер?» — Wake-word НЕ требуется
         if re.search(r'\b(?:какой|скажи|напомни)\s+(?:сейчас\s+)?триг+ер\b', text_lower):
             log_info("Распознан прямой запрос триггера (без wake-word)")
             self.on_command("какой сейчас триггер", raw_text)
             return True
 
-        # 2. Нечеткий поиск триггера в фразе
+        # 3. Legacy нечеткий поиск триггера в фразе (когда KWS отключен)
         has_trigger, command_part = find_trigger_in_phrase(text_lower, current_trigger)
         if not has_trigger:
             log_info(f"Триггер '{current_trigger}' не найден в фразе: '{raw_text}'")
-            # Показываем пользователю в консоли, что именно микрофон услышал
             if self.on_log:
                 self.on_log(f"[dim]Услышано: '{raw_text}' (ожидался триггер '{current_trigger}')[/dim]")
             return False
@@ -484,7 +553,7 @@ class VoiceListener:
             self.on_command("триггер_активирован", raw_text)
             return True
 
-        # 3. Команда смены триггера: «Морсик, теперь тригер — Карлуша»
+        # 4. Команда смены триггера: «Морсик, теперь тригер — Карлуша»
         change_regex = r'(?:теперь\s+|смени(?:ть)?\s+|новый\s+)?триг+ер\s*(?:теперь\s+)?(?:на\s+|—\s*|-\s*|:\s*|это\s*)?([а-яёa-z0-9]+)'
         change_match = re.search(change_regex, command_part)
         if change_match and any(w in command_part for w in ["смени", "теперь", "новый", "поменяй"]):
