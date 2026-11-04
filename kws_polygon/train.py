@@ -78,11 +78,13 @@ def train_all_models(epochs: int = 10, lr: float = 0.003, is_fine_tune: bool = F
         # 1. Положительные примеры
         pos_list = [data[f"pos_{target_key}"]]
         if user_samples.get(target_key):
-            # Дублируем реальные сэмплы пользователя с повышенным весом (х3)
+            # Дублируем реальные сэмплы пользователя с высоким весом (х8..х10),
+            # чтобы голос реального человека доминировал над синтетикой Silero
             user_pos = np.array(user_samples[target_key], dtype=np.float32)
-            for _ in range(3):
+            repeat_pos = 10 if is_fine_tune else 6
+            for _ in range(repeat_pos):
                 pos_list.append(user_pos)
-            print(f"  -> Добавлено {len(user_samples[target_key])} реальных сэмплов с весом x3", flush=True)
+            print(f"  -> Добавлено {len(user_samples[target_key])} реальных сэмплов (вес x{repeat_pos})", flush=True)
 
         pos_all = np.concatenate(pos_list, axis=0)
 
@@ -92,10 +94,14 @@ def train_all_models(epochs: int = 10, lr: float = 0.003, is_fine_tune: bool = F
             if other_key != target_key:
                 neg_list.append(data[f"pos_{other_key}"])
                 if user_samples.get(other_key):
-                    neg_list.append(np.array(user_samples[other_key], dtype=np.float32))
+                    user_other = np.array(user_samples[other_key], dtype=np.float32)
+                    for _ in range(6):
+                        neg_list.append(user_other)
 
         if user_samples.get("negative"):
-            neg_list.append(np.array(user_samples["negative"], dtype=np.float32))
+            user_neg = np.array(user_samples["negative"], dtype=np.float32)
+            for _ in range(6):
+                neg_list.append(user_neg)
 
         neg_all = np.concatenate(neg_list, axis=0)
 
@@ -103,8 +109,8 @@ def train_all_models(epochs: int = 10, lr: float = 0.003, is_fine_tune: bool = F
 
         # 3. Обучение PyTorch модели
         model = KWSNet()
-        actual_epochs = 6 if is_fine_tune and total_user_samples > 0 else epochs
-        actual_lr = lr * 0.7 if is_fine_tune else lr
+        actual_epochs = 12 if is_fine_tune and total_user_samples > 0 else epochs
+        actual_lr = lr
 
         t0 = time.time()
         losses = train_kws_head(model, pos_all, neg_all, epochs=actual_epochs, lr=actual_lr, batch_size=64)
