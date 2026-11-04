@@ -309,7 +309,7 @@ def main():
                     log_info(f"Получена текстовая команда: '{cmd_text}'")
 
                 if cmd_text == "триггер_активирован":
-                    tts.say("Слушаю вас")
+                    tts.say("Слушаю вас", keep_ducked=True)
                     voice_listener.open_command_window(6.0)
                     continue
 
@@ -319,7 +319,7 @@ def main():
 
                 # Активация по имени без команды
                 if action == "TRIGGER_ACTIVATED":
-                    tts.say("Слушаю вас")
+                    tts.say("Слушаю вас", keep_ducked=True)
                     voice_listener.open_command_window(6.0)
                     continue
 
@@ -787,6 +787,10 @@ def main():
             except Exception as e:
                 log_error(f"Исключение при выполнении команды '{cmd_text}': {e}")
                 console.print(f"[bold red]Ошибка обработки команды:[/bold red] {e} (подробности в {LOG_FILE.name})")
+                try:
+                    player.duck(False)
+                except Exception:
+                    pass
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Завершение работы (Ctrl+C)... До встречи![/yellow]")
