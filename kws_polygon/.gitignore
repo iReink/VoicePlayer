@@ -1,0 +1,6 @@
+dataset_cache.npz
+*.pem
+*.pfx
+temp_audio/
+samples/
+__pycache__/

@@ -1,0 +1,33 @@
+[
+  {
+    "timestamp": "2026-11-04 06:00:21",
+    "type": "Первичное обучение (Cold Train)",
+    "user_samples_count": 0,
+    "results": {
+      "morsik": {
+        "name": "Морсик",
+        "accuracy": 99.0,
+        "final_loss": 0.0025,
+        "avg_pos": 0.993,
+        "avg_neg": 0.021,
+        "file": "morsik.onnx"
+      },
+      "karlusha": {
+        "name": "Карлуша",
+        "accuracy": 97.0,
+        "final_loss": 0.0667,
+        "avg_pos": 1.0,
+        "avg_neg": 0.087,
+        "file": "karlusha.onnx"
+      },
+      "hey_wisp": {
+        "name": "Эй, Висп!",
+        "accuracy": 100.0,
+        "final_loss": 0.0026,
+        "avg_pos": 1.0,
+        "avg_neg": 0.0,
+        "file": "hey_wisp.onnx"
+      }
+    }
+  }
+]

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎙️ KWS Polygon — Испытательный стенд Wake-Word</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo-icon">🎙️</div>
+                <div>
+                    <h1 class="logo-title">KWS Polygon <span class="badge badge-accent">ONNX Lab</span></h1>
+                    <p class="logo-subtitle">Испытания и дообучение моделей ключевых слов</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="lan-info" id="lanInfo" title="Адрес для подключения с других устройств в локальной сети">
+                    <span class="lan-dot"></span>
+                    <span id="lanUrl">Сеть: Загрузка...</span>
+                </div>
+                <nav class="nav-tabs">
+                    <button class="tab-btn active" data-tab="test">🎯 Испытания</button>
+                    <button class="tab-btn" data-tab="stats">📊 Статистика</button>
+                    <button class="tab-btn" data-tab="train">🚀 Дообучение</button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- TAB 1: LIVE TESTING -->
+            <section class="tab-pane active" id="pane-test">
+                <!-- AUDIO VISUALIZER & PUSH-TO-TALK -->
+                <div class="card visualizer-card">
+                    <div class="vis-header">
+                        <div class="vis-title">
+                            <span class="pulse-indicator" id="recIndicator"></span>
+                            <span id="visStatusText">Готов к записи</span>
+                        </div>
+                        <div class="vis-meta">
+                            <span class="vis-hint">Удерживайте <strong>Пробел</strong> или кнопку ниже</span>
+                        </div>
+                    </div>
+
+                    <div class="canvas-wrapper">
+                        <canvas id="waveformCanvas"></canvas>
+                    </div>
+
+                    <div class="controls-bar">
+                        <button class="btn btn-primary push-to-talk-btn" id="pttBtn">
+                            <span class="btn-icon">🎙️</span>
+                            <span id="pttBtnText">Зажмите для записи (Пробел)</span>
+                        </button>
+                        <div class="audio-playback-preview" id="playbackWrapper" style="display: none;">
+                            <span class="playback-label">Записано:</span>
+                            <audio id="audioPreview" controls></audio>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4-PART MATRIX CARD -->
+                <div class="section-title">
+                    <h2>Мгновенный отклик моделей и Валидация</h2>
+                    <span class="section-hint">Произнесите слово $\to$ оцените вероятности $\to$ нажмите кнопку подтверждения</span>
+                </div>
+
+                <div class="models-grid">
+                    <!-- MODEL 1: МОРСИК -->
+                    <div class="card model-card" id="card-morsik">
+                        <div class="card-header">
+                            <div class="model-badge">Trigger 1</div>
+                            <h3 class="model-name">«Морсик»</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="meter-container">
+                                <div class="meter-circle" id="meter-morsik">
+                                    <div class="meter-val" id="val-morsik">0.0%</div>
+                                </div>
+                            </div>
+                            <div class="meter-bar-wrapper">
+                                <div class="meter-fill" id="fill-morsik" style="width: 0%;"></div>
+                            </div>
+                            <div class="model-status" id="status-morsik">Ожидание...</div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="verdict-label" id="verdict-morsik"></span>
+                        </div>
+                    </div>
+
+                    <!-- MODEL 2: КАРЛУША -->
+                    <div class="card model-card" id="card-karlusha">
+                        <div class="card-header">
+                            <div class="model-badge">Trigger 2</div>
+                            <h3 class="model-name">«Карлуша»</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="meter-container">
+                                <div class="meter-circle" id="meter-karlusha">
+                                    <div class="meter-val" id="val-karlusha">0.0%</div>
+                                </div>
+                            </div>
+                            <div class="meter-bar-wrapper">
+                                <div class="meter-fill" id="fill-karlusha" style="width: 0%;"></div>
+                            </div>
+                            <div class="model-status" id="status-karlusha">Ожидание...</div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="verdict-label" id="verdict-karlusha"></span>
+                        </div>
+                    </div>
+
+                    <!-- MODEL 3: ЭЙ, ВИСП! -->
+                    <div class="card model-card" id="card-hey_wisp">
+                        <div class="card-header">
+                            <div class="model-badge">Trigger 3</div>
+                            <h3 class="model-name">«Эй, Висп!»</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="meter-container">
+                                <div class="meter-circle" id="meter-hey_wisp">
+                                    <div class="meter-val" id="val-hey_wisp">0.0%</div>
+                                </div>
+                            </div>
+                            <div class="meter-bar-wrapper">
+                                <div class="meter-fill" id="fill-hey_wisp" style="width: 0%;"></div>
+                            </div>
+                            <div class="model-status" id="status-hey_wisp">Ожидание...</div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="verdict-label" id="verdict-hey_wisp"></span>
+                        </div>
+                    </div>
+
+                    <!-- PART 4: VALIDATION ACTIONS -->
+                    <div class="card validation-card" id="card-validation">
+                        <div class="card-header">
+                            <div class="model-badge badge-warning">Разметка</div>
+                            <h3 class="model-name">Что прозвучало?</h3>
+                        </div>
+                        <div class="card-body validation-actions">
+                            <p class="val-desc">Подтвердите реальное слово для расчёта ошибок и сбора сэмплов:</p>
+                            <button class="btn btn-val btn-val-morsik" data-label="morsik" id="btnValMorsik" disabled>
+                                <span>🐾</span> «Морсик»
+                            </button>
+                            <button class="btn btn-val btn-val-karlusha" data-label="karlusha" id="btnValKarlusha" disabled>
+                                <span>🦅</span> «Карлуша»
+                            </button>
+                            <button class="btn btn-val btn-val-wisp" data-label="hey_wisp" id="btnValWisp" disabled>
+                                <span>⚡</span> «Эй, Висп!»
+                            </button>
+                            <button class="btn btn-val btn-val-error" data-label="negative" id="btnValError" disabled>
+                                <span>❌</span> Ошибка / Шум
+                            </button>
+                        </div>
+                        <div class="card-footer">
+                            <span class="validation-status-text" id="valStatusText">Сделайте запись звука</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: STATISTICS -->
+            <section class="tab-pane" id="pane-stats">
+                <div class="stats-summary-grid">
+                    <div class="card stat-card">
+                        <div class="stat-number" id="statTotalTests">0</div>
+                        <div class="stat-label">Проведено испытаний</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-number stat-green" id="statAvgAccuracy">0%</div>
+                        <div class="stat-label">Средняя точность</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-number stat-red" id="statTotalFP">0</div>
+                        <div class="stat-label">Ошибок I рода (Ложные тревоги)</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-number stat-yellow" id="statTotalFN">0</div>
+                        <div class="stat-label">Ошибок II рода (Пропуски цели)</div>
+                    </div>
+                </div>
+
+                <div class="card table-card">
+                    <div class="table-header">
+                        <h3>Матрица ошибок по моделям</h3>
+                        <span class="table-hint">Данные рассчитываются на основе ваших реальных подтверждений</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Модель</th>
+                                    <th>Всего проверок</th>
+                                    <th>Точность (Acc)</th>
+                                    <th>Ошибка I рода (FP)</th>
+                                    <th>Ошибка II рода (FN)</th>
+                                    <th>Чувствительность (Recall)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statsTableBody">
+                                <tr><td colspan="6" class="text-center">Загрузка данных...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card table-card">
+                    <div class="table-header">
+                        <h3>Собранные пользовательские сэмплы для дообучения</h3>
+                        <span class="table-hint">Сохранены на сервере и готовы для обогащения нейросетей</span>
+                    </div>
+                    <div class="samples-count-badges" id="samplesCountBadges">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: RE-TRAINING & LOGS -->
+            <section class="tab-pane" id="pane-train">
+                <div class="card retrain-cta-card">
+                    <div class="retrain-content">
+                        <h3>⚡ Дообучение моделей на реальных сэмплах (Active Learning)</h3>
+                        <p>
+                            Собранные вами аудиозаписи с микрофонов смешиваются с синтетическим датасетом (с повышенным весом). 
+                            Нейросети адаптируются под ваш голос, тембр и акустику комнаты.
+                        </p>
+                        <div class="retrain-meta">
+                            <span id="readySamplesCount">Готово сэмплов: 0</span>
+                        </div>
+                    </div>
+                    <div class="retrain-actions">
+                        <button class="btn btn-accent btn-large" id="btnStartRetrain">
+                            <span class="btn-icon">🚀</span>
+                            <span id="retrainBtnText">Запустить дообучение моделей</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PROGRESS BAR -->
+                <div class="card progress-card" id="retrainProgressCard" style="display: none;">
+                    <div class="progress-title" id="progressStatusText">Обучение нейросетей...</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill indeterminate"></div>
+                    </div>
+                </div>
+
+                <div class="card table-card">
+                    <div class="table-header">
+                        <h3>📜 Журнал обучений и версий</h3>
+                        <span class="table-hint">История всех циклов обучения и финальные метрики моделей</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Дата и время</th>
+                                    <th>Тип обучения</th>
+                                    <th>Сэмплов пользователя</th>
+                                    <th>Результат «Морсик»</th>
+                                    <th>Результат «Карлуша»</th>
+                                    <th>Результат «Эй, Висп!»</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr><td colspan="6" class="text-center">Загрузка истории...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
