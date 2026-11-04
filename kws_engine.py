@@ -114,6 +114,12 @@ class KWSResult(NamedTuple):
     probability: float
     all_scores: Dict[str, float]
 
+WAKE_WORD_DISPLAY_NAMES = {
+    "morsik": "Морсик",
+    "karlusha": "Карлуша",
+    "hey_wisp": "Эй Висп"
+}
+
 def play_wake_chime_async():
     """Асинхронно воспроизводит приятный звуковой сигнал (chime) подтверждения wake-word"""
     def _play():
@@ -191,6 +197,13 @@ class KWSEngine:
     @property
     def has_models(self) -> bool:
         return len(self.sessions) > 0
+
+    @property
+    def active_trigger_names(self) -> list:
+        names = []
+        for k in sorted(self.sessions.keys()):
+            names.append(WAKE_WORD_DISPLAY_NAMES.get(k, k.capitalize()))
+        return names
 
     def process_audio(self, audio_window_16k: np.ndarray) -> Optional[KWSResult]:
         """

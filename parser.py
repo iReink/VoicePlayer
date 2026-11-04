@@ -43,6 +43,14 @@ class CommandParser:
         if not clean_text:
             return {"action": "NONE"}
 
+        # 1.1 Обращение к ассистенту по имени без команды (только триггер)
+        if clean_text in [
+            "морсик", "морсика", "морсику", "морфик", "горсик",
+            "карлуша", "корлуша", "карлушка", "карлуше",
+            "эй висп", "висп", "виспа", "эй", "hey wisp", "wisp", "ei vispa", "morsik", "karlusha"
+        ]:
+            return {"action": "TRIGGER_ACTIVATED"}
+
         # 2. Запросы триггера (wake-word)
         if re.search(r'\b(?:какой|скажи|напомни)\s+(?:сейчас\s+)?триг+ер\b', clean_text):
             return {"action": "GET_TRIGGER"}

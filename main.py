@@ -115,6 +115,8 @@ def main():
             console.print("[bold red][REC] [Запись речи...][/bold red]")
         elif status == "TRANSCRIBING":
             console.print("[bold yellow][~] [Распознавание речи...][/bold yellow]")
+        elif status == "LISTENING":
+            console.print("[bold green]🎙 [Слушаю команду...][/bold green]")
 
     def on_wake_word(model_name: str):
         names = {
@@ -175,12 +177,18 @@ def main():
 
     # Приветственный баннер
     active_v_name = AVAILABLE_VOICES.get(config.voice, {}).get("name", config.voice)
+    if voice_listener.kws_engine.has_models:
+        active_trigs_str = ", ".join(voice_listener.kws_engine.active_trigger_names)
+        trigger_line = f"Триггеры (KWS): [bold magenta]{active_trigs_str}[/bold magenta]"
+    else:
+        trigger_line = f"Триггер: [bold magenta]{config.trigger}[/bold magenta]"
+
     banner_text = (
         f"[bold cyan]=== Голосовой и текстовый ассистент Яндекс.Музыки ===[/bold cyan]\n"
         f"Пользователь: [bold white]{service.user_name}[/bold white] | "
         f"Подписка Плюс: [bold green]{'Активна' if service.has_plus else 'Нет'}[/bold green] | "
         f"Громкость: [bold yellow]{player.volume}%[/bold yellow]\n"
-        f"Триггер: [bold magenta]{config.trigger}[/bold magenta] | "
+        f"{trigger_line} | "
         f"Голос: [bold cyan]{active_v_name}[/bold cyan] (скажите: «сменить голос»)\n"
         f"[dim]Логирование активно в: {LOG_FILE.name} | 'помощь' — список команд[/dim]"
     )
@@ -302,11 +310,18 @@ def main():
 
                 if cmd_text == "триггер_активирован":
                     tts.say("Слушаю вас")
+                    voice_listener.open_command_window(6.0)
                     continue
 
                 cmd = nlu.parse(cmd_text)
                 action = cmd["action"]
                 log_debug(f"Action: {action}, data: {cmd}")
+
+                # Активация по имени без команды
+                if action == "TRIGGER_ACTIVATED":
+                    tts.say("Слушаю вас")
+                    voice_listener.open_command_window(6.0)
+                    continue
 
                 # Выход
                 if action == "EXIT":
@@ -343,17 +358,22 @@ def main():
 
                 # Запрос текущего триггера
                 elif action == "GET_TRIGGER":
-                    cur_trig = config.trigger
-                    console.print(f"[bold cyan]Текущий триггер:[/bold cyan] [bold yellow]{cur_trig}[/bold yellow]")
-                    tts.say(f"Текущий триггер — {cur_trig}", pause_music=False)
+                    if voice_listener.kws_engine.has_models:
+                        trig_list = ", ".join(voice_listener.kws_engine.active_trigger_names)
+                        console.print(f"[bold cyan]Активные триггеры KWS:[/bold cyan] [bold yellow]{trig_list}[/bold yellow]")
+                        tts.say(f"Активны триггеры: {trig_list}", pause_music=False)
+                    else:
+                        cur_trig = config.trigger
+                        console.print(f"[bold cyan]Текущий триггер:[/bold cyan] [bold yellow]{cur_trig}[/bold yellow]")
+                        tts.say(f"Текущий триггер — {cur_trig}", pause_music=False)
 
                 # Смена триггера
                 elif action == "SET_TRIGGER":
                     new_trig = cmd["new_trigger"]
                     config.trigger = new_trig
-                    console.print(f"[bold green][OK] Триггер успешно изменён на:[/bold green] [bold yellow]{new_trig}[/bold yellow]")
-                    tts.say(f"Триггер изменён на {new_trig}", pause_music=False)
-                    log_info(f"Триггер изменен на: {new_trig}")
+                    console.print(f"[bold green][OK] Основной триггер изменён на:[/bold green] [bold yellow]{new_trig}[/bold yellow]")
+                    tts.say(f"Основной триггер изменён на {new_trig}", pause_music=False)
+                    log_info(f"Основной триггер изменен на: {new_trig}")
 
                 # Запрос текущего голоса
                 elif action == "GET_VOICE":
