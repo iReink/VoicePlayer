@@ -9,13 +9,14 @@ let analyserNode = null;
 let scriptProcessor = null;
 let isRecording = false;
 let recordedAudioChunks = [];
+let totalRecordedSamples = 0;
 let currentAudioId = null;
 let currentPredictions = null;
 let spaceKeyLocked = false;
 let autoStopTimer = null;
 
 const RECORD_SAMPLE_RATE = 16000;
-const MAX_RECORD_SECONDS = 1.5;
+const MAX_RECORD_SECONDS = 3.0;
 
 // DOM Elements
 const canvas = document.getElementById('waveformCanvas');
@@ -91,10 +92,13 @@ async function initAudio() {
             if (!isRecording) return;
             const inputData = e.inputBuffer.getChannelData(0);
             recordedAudioChunks.push(new Float32Array(inputData));
+            totalRecordedSamples += inputData.length;
 
-            // Автоостановка через 1.5 секунды
-            const totalSamples = recordedAudioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
-            if (totalSamples >= RECORD_SAMPLE_RATE * MAX_RECORD_SECONDS) {
+            const recSec = (totalRecordedSamples / RECORD_SAMPLE_RATE).toFixed(1);
+            visStatusText.textContent = `🎙️ Запись (${recSec}с / макс ${MAX_RECORD_SECONDS}с)... Отпустите Пробел для анализа`;
+
+            // Автоостановка при превышении лимита
+            if (totalRecordedSamples >= RECORD_SAMPLE_RATE * MAX_RECORD_SECONDS) {
                 stopRecording();
             }
         };
@@ -159,12 +163,13 @@ async function startRecording() {
 
     resetCardVisuals();
     recordedAudioChunks = [];
+    totalRecordedSamples = 0;
     isRecording = true;
 
     pttBtn.classList.add('recording');
     pttBtnText.textContent = "🔴 Идёт запись (Отпустите для анализа)...";
     recIndicator.classList.add('recording');
-    visStatusText.textContent = "Запись 1.5 сек звука...";
+    visStatusText.textContent = "🎙️ Запись... Произнесите слово и отпустите Пробел";
 
     // Блокируем кнопки валидации на время новой записи
     valButtons.forEach(btn => {
@@ -240,6 +245,10 @@ async function processRecordedAudio() {
 
     // Склеиваем все чанки
     const totalLength = recordedAudioChunks.reduce((acc, c) => acc + c.length, 0);
+    if (totalLength < RECORD_SAMPLE_RATE * 0.25) {
+        visStatusText.textContent = "⚠️ Слишком короткая запись (< 0.25 с). Удерживайте Пробел дольше.";
+        return;
+    }
     const fullAudio = new Float32Array(totalLength);
     let offset = 0;
     for (const chunk of recordedAudioChunks) {
@@ -377,20 +386,28 @@ function resetCardVisuals() {
 
 // 8. PUSH-TO-TALK LISTENERS (SPACEBAR & BUTTON)
 window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && !spaceKeyLocked) {
-        // Игнорируем если фокус в инпуте
+    if (e.code === 'Space') {
         if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-        e.preventDefault();
-        spaceKeyLocked = true;
-        startRecording();
+        if (e.repeat) {
+            e.preventDefault();
+            return;
+        }
+        if (!spaceKeyLocked) {
+            e.preventDefault();
+            spaceKeyLocked = true;
+            startRecording();
+        }
     }
 });
 
 window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' && spaceKeyLocked) {
+    if (e.code === 'Space') {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
         e.preventDefault();
         spaceKeyLocked = false;
-        stopRecording();
+        if (isRecording) {
+            stopRecording();
+        }
     }
 });
 

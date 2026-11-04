@@ -13,8 +13,10 @@ import pathlib
 import datetime
 import io
 import wave
+import traceback
 import numpy as np
 import scipy.io.wavfile
+import scipy.signal
 from aiohttp import web
 
 # Добавляем текущую директорию в sys.path
@@ -172,9 +174,11 @@ async def handle_predict(request):
         sr, audio_int16 = scipy.io.wavfile.read(io.BytesIO(audio_bytes))
         audio_float = audio_int16.astype(np.float32) / 32768.0
 
+        if len(audio_float.shape) > 1:
+            audio_float = np.mean(audio_float, axis=1)
+
         # Если частота не 16кГц, ресемплим
         if sr != 16000:
-            import scipy.signal
             num_16k = int(len(audio_float) * 16000 / sr)
             audio_float = scipy.signal.resample(audio_float, num_16k).astype(np.float32)
 
@@ -360,7 +364,6 @@ async def handle_retrain(request):
         reload_detectors()
         return web.json_response({"status": "ok", "log": log_entry})
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return web.json_response({"status": "error", "error": str(e)}, status=500)
 
