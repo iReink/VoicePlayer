@@ -17,6 +17,7 @@ let autoStopTimer = null;
 
 const RECORD_SAMPLE_RATE = 16000;
 const MAX_RECORD_SECONDS = 3.0;
+let currentThreshold = 0.80;
 
 // DOM Elements
 const canvas = document.getElementById('waveformCanvas');
@@ -28,6 +29,8 @@ const visStatusText = document.getElementById('visStatusText');
 const playbackWrapper = document.getElementById('playbackWrapper');
 const audioPreview = document.getElementById('audioPreview');
 const valStatusText = document.getElementById('valStatusText');
+const thresholdSlider = document.getElementById('thresholdSlider');
+const thresholdDisplay = document.getElementById('thresholdDisplay');
 
 const cards = {
     morsik: document.getElementById('card-morsik'),
@@ -269,7 +272,7 @@ async function processRecordedAudio() {
     formData.append('audio', wavBlob, 'recording.wav');
 
     try {
-        const resp = await fetch('/api/predict', {
+        const resp = await fetch(`/api/predict?threshold=${currentThreshold}`, {
             method: 'POST',
             body: formData
         });
@@ -294,7 +297,7 @@ async function processRecordedAudio() {
 
 // 6. DISPLAY MODEL PREDICTIONS
 function displayPredictions(results) {
-    const threshold = 0.50;
+    const threshold = currentThreshold;
 
     for (const [key, res] of Object.entries(results)) {
         const pct = Math.round(res.prob * 100);
@@ -336,7 +339,8 @@ async function submitValidation(label, targetBtn = null) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 audio_id: currentAudioId,
-                label: label
+                label: label,
+                threshold: currentThreshold
             })
         });
         const data = await resp.json();
@@ -513,7 +517,7 @@ tabBtns.forEach(btn => {
 // 10. STATS LOADING
 async function loadStats() {
     try {
-        const resp = await fetch('/api/stats');
+        const resp = await fetch(`/api/stats?threshold=${currentThreshold}`);
         const data = await resp.json();
 
         document.getElementById('statTotalTests').textContent = data.total_tests;
@@ -551,6 +555,21 @@ async function loadStats() {
     } catch (err) {
         console.error("Stats load error:", err);
     }
+}
+
+// 10.1 THRESHOLD SLIDER
+if (thresholdSlider) {
+    thresholdSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        currentThreshold = val / 100.0;
+        if (thresholdDisplay) {
+            thresholdDisplay.textContent = val + "%";
+        }
+        if (currentPredictions) {
+            displayPredictions(currentPredictions);
+        }
+        loadStats();
+    });
 }
 
 // 10.1 RESET STATS BUTTON

@@ -188,7 +188,10 @@ async def handle_predict(request):
 
     # Запускаем все 3 модели
     results = {}
-    threshold = 0.50
+    try:
+        threshold = float(request.query.get("threshold", 0.80))
+    except Exception:
+        threshold = 0.80
 
     for key, det in detectors.items():
         try:
@@ -254,8 +257,14 @@ async def handle_validate(request):
 
     # 2. Оцениваем корректность моделей по эталону
     evaluation = {}
+    try:
+        threshold = float(data.get("threshold", 0.80))
+    except Exception:
+        threshold = 0.80
+
     for key in MODELS_CONFIG:
-        detected = results[key]["detected"]
+        prob = results[key]["prob"]
+        detected = prob >= threshold
         is_target = (key == label)
 
         if is_target:
@@ -309,11 +318,16 @@ async def handle_stats(request):
     models_stats = {}
     sample_counts = {k: 0 for k in list(MODELS_CONFIG.keys()) + ["negative"]}
 
+    try:
+        threshold = float(request.query.get("threshold", 0.80))
+    except Exception:
+        threshold = 0.80
+
     for key, cfg in MODELS_CONFIG.items():
-        tp = sum(1 for e in db_entries if e.get("evaluation", {}).get(key, {}).get("type") == "TP")
-        tn = sum(1 for e in db_entries if e.get("evaluation", {}).get(key, {}).get("type") == "TN")
-        fp = sum(1 for e in db_entries if e.get("evaluation", {}).get(key, {}).get("type") == "FP")
-        fn = sum(1 for e in db_entries if e.get("evaluation", {}).get(key, {}).get("type") == "FN")
+        tp = sum(1 for e in db_entries if e.get("label") == key and e.get("results", {}).get(key, 0.0) >= threshold)
+        fn = sum(1 for e in db_entries if e.get("label") == key and e.get("results", {}).get(key, 0.0) < threshold)
+        fp = sum(1 for e in db_entries if e.get("label") != key and e.get("results", {}).get(key, 0.0) >= threshold)
+        tn = sum(1 for e in db_entries if e.get("label") != key and e.get("results", {}).get(key, 0.0) < threshold)
 
         total = tp + tn + fp + fn
         acc = round((tp + tn) / total * 100.0, 1) if total > 0 else 100.0

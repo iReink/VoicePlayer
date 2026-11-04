@@ -58,6 +58,13 @@
                             <span class="btn-icon">🎙️</span>
                             <span id="pttBtnText">Зажмите для записи (Пробел)</span>
                         </button>
+                        <div class="threshold-control" title="Порог уверенности модели для срабатывания (Защита от ложных тревог)">
+                            <div class="threshold-label-wrap">
+                                <span class="threshold-title">🛡️ Порог отсечки (Anti-FP):</span>
+                                <span class="threshold-val-badge" id="thresholdDisplay">80%</span>
+                            </div>
+                            <input type="range" id="thresholdSlider" min="50" max="95" step="5" value="80" class="slider-range">
+                        </div>
                         <div class="audio-playback-preview" id="playbackWrapper" style="display: none;">
                             <span class="playback-label">Записано:</span>
                             <audio id="audioPreview" controls></audio>

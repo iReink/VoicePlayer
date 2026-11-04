@@ -98,12 +98,13 @@ def train_kws_head(
     epochs: int = 8,
     lr: float = 0.003,
     batch_size: int = 64,
-    pos_weight_val: float = 2.0
+    neg_weight_val: float = 2.5
 ) -> List[float]:
     """
     Обучает/дообучает бинарную KWS голову на признаках (Mel-спектрограммах).
     pos_features: (N, 40, 151)
     neg_features: (M, 40, 151)
+    neg_weight_val: штраф за ложные тревоги (False Positives)
     """
     model.train()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
@@ -137,8 +138,8 @@ def train_kws_head(
             optimizer.zero_grad()
             preds = model(bx)
             
-            # Взвешивание положительных примеров для баланса
-            weights = torch.where(by == 1.0, torch.tensor(pos_weight_val), torch.tensor(1.0))
+            # Асимметричный штраф: за ошибку на негативе (False Positive) штрафуем жестче в 2.5 раза
+            weights = torch.where(by == 0.0, torch.tensor(neg_weight_val), torch.tensor(1.0))
             loss = nn.functional.binary_cross_entropy(preds, by, weight=weights)
             
             loss.backward()
