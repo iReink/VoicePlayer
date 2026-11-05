@@ -391,9 +391,12 @@ class VoiceListener:
                         vad_prob = 0.0
                         if vad_model is not None and rms > 0.005:
                             try:
-                                vad_res = vad_model(block_flat)
-                                vad_prob = float(np.max(vad_res))
-                            except Exception:
+                                # Silero VAD требует размерность, кратную 512 сэмплам.
+                                # Для 960 сэмплов берём два 512-сэмпловых среза (начало и конец)
+                                vad_res1 = vad_model(block_flat[:512])
+                                vad_res2 = vad_model(block_flat[-512:])
+                                vad_prob = max(float(np.max(vad_res1)), float(np.max(vad_res2)))
+                            except Exception as e:
                                 vad_prob = 0.0
 
                         # Адаптация шумового фона для fallback
@@ -450,10 +453,10 @@ class VoiceListener:
                             else:
                                 # Legacy режим без KWS (или принудительный ввод команды в меню)
                                 if vad_model is not None:
-                                    min_prob = 0.70 if (music_active and consecutive_unrecognized >= 2) else 0.50
-                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.010)
+                                    min_prob = 0.70 if (music_active and consecutive_unrecognized >= 2) else 0.45
+                                    is_voice = (vad_prob >= min_prob) and (rms >= 0.008)
                                 else:
-                                    threshold = max(0.015, noise_floor * (2.2 if music_active else 2.5))
+                                    threshold = max(0.012, noise_floor * (2.0 if music_active else 2.2))
                                     is_voice = rms > threshold
 
                                 if is_voice:
@@ -472,9 +475,9 @@ class VoiceListener:
                             audio_buffer.append(block_flat.copy())
 
                             if vad_model is not None:
-                                is_voice = (vad_prob >= 0.25) or (rms >= 0.012)
+                                is_voice = (vad_prob >= 0.20) or (rms >= 0.009)
                             else:
-                                is_voice = rms > max(0.012, noise_floor * 1.5)
+                                is_voice = rms > max(0.010, noise_floor * 1.5)
 
                             if is_voice:
                                 silence_blocks = 0

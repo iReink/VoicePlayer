@@ -186,6 +186,13 @@ class AECFrontend:
         Фоновый воркер: непрерывно захватывает PCM из звуковой карты (WASAPI Loopback)
         и складывает 10-мс блоки в кольцевую очередь.
         """
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.ole32.CoInitialize(None)
+            except Exception:
+                pass
+
         if sc is None:
             log_warning("[AEC] Модуль soundcard не установлен, loopback недоступен")
             self._state = AECState.DEGRADED
@@ -272,11 +279,14 @@ class AECFrontend:
         self._blocks_processed += 1
         return np.concatenate(clean_chunks)
 
-    def start_diagnostic_session(self, duration_sec: float = 8.0) -> Path:
+    def start_diagnostic_session(self, duration_sec: float = 8.0, duration_s: Optional[float] = None) -> Path:
         """
         Запуск диагностической сессии (Раздел 10 спецификации).
         Записывает 3 потока: сырой микрофон, опорный сигнал колонок и очищенный выход.
         """
+        if duration_s is not None:
+            duration_sec = duration_s
+
         with self._lock:
             self._diag_active = True
             self._diag_end_time = time.time() + duration_sec
