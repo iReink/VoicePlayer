@@ -61,6 +61,27 @@ class CommandParser:
             new_val = change_trig.group(1).strip().capitalize()
             return {"action": "SET_TRIGGER", "new_trigger": new_val}
 
+        # 2.1 Управление эхоподавлением (AEC)
+        if clean_text in [
+            "включи эхоподавление", "включить эхоподавление", "включи аек", "включить аек", "включи aec", "включить aec"
+        ] or re.search(r'\b(?:включи(?:ть)?|активируй|запусти)\s+(?:эхоподавление|аек|aec)\b', clean_text):
+            return {"action": "SET_AEC", "enabled": True}
+
+        if clean_text in [
+            "выключи эхоподавление", "выключить эхоподавление", "отключи эхоподавление", "выключи аек", "отключи аек", "выключи aec"
+        ] or re.search(r'\b(?:выключи(?:ть)?|отключи(?:ть)?|деактивируй)\s+(?:эхоподавление|аек|aec)\b', clean_text):
+            return {"action": "SET_AEC", "enabled": False}
+
+        if clean_text in [
+            "статус эхоподавления", "эхоподавление", "что с эхоподавлением", "аек", "aec", "статус аек"
+        ] or re.search(r'\b(?:статус|состояние)\s+(?:эхоподавления|аек|aec)\b', clean_text):
+            return {"action": "GET_AEC"}
+
+        if clean_text in [
+            "тест эхоподавления", "тест эхо", "запиши диагностику", "диагностика эхоподавления", "диагностика", "диагностика aec"
+        ] or re.search(r'\b(?:тест|диагностика)\s+(?:эхоподавления|аек|aec|эхо)\b', clean_text):
+            return {"action": "AEC_DIAGNOSTIC"}
+
         # 3. Голос ассистента и голосовое меню
         if re.search(r'\b(?:какой|скажи|напомни)\s+(?:сейчас\s+)?голос\b', clean_text):
             return {"action": "GET_VOICE"}

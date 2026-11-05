@@ -21,6 +21,7 @@ except ImportError:
 
 from logger import log_debug, log_info, log_warning, log_error
 from kws_engine import KWSEngine, play_wake_chime_async
+from aec_engine import AECFrontend
 
 MODEL_DIR = Path(__file__).parent / "models" / "whisper-small"
 
@@ -216,6 +217,7 @@ class VoiceListener:
         self.on_wake_word = on_wake_word
 
         self.kws_engine = KWSEngine(threshold=0.80)
+        self.aec = AECFrontend(enabled=getattr(self.config, 'aec_enabled', True))
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -283,6 +285,7 @@ class VoiceListener:
         if self._running:
             return
         self._running = True
+        self.aec.start()
         self._thread = threading.Thread(target=self._listen_loop, daemon=True)
         self._thread.start()
         log_info("Поток VoiceListener запущен")
@@ -290,6 +293,7 @@ class VoiceListener:
     def stop(self):
         """Остановка прослушивания"""
         self._running = False
+        self.aec.stop()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=0.6)
         log_info("Остановка VoiceListener")
@@ -303,7 +307,8 @@ class VoiceListener:
 
     def _listen_loop(self):
         sample_rate = 16000
-        block_size = 1024  # ~64 ms
+        # 960 сэмплов = 60 мс (кратно 160 сэмплам / 10 мс кадрам WebRTC APM AEC3)
+        block_size = 960
         
         max_silence_blocks = int(0.70 / (block_size / sample_rate))  # 0.70 сек тишины
         min_speech_blocks = int(0.35 / (block_size / sample_rate))   # 0.35 сек речи
@@ -336,7 +341,7 @@ class VoiceListener:
             try:
                 log_debug("Открытие аудиопотока микрофона...")
                 with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32', blocksize=block_size) as stream:
-                    # Кольцевой буфер KWS: 1.5 сек (24 блока по 1024 сэмпла)
+                    # Кольцевой буфер KWS: 1.5 сек (25 блоков по 960 сэмплов)
                     ring_buffer_blocks = int(1.5 * sample_rate / block_size)
                     kws_ring_buffer = collections.deque(maxlen=ring_buffer_blocks)
                     blocks_since_kws = 0
@@ -347,7 +352,7 @@ class VoiceListener:
                     is_recording = False
                     silence_blocks = 0
                     noise_floor = 0.005
-                    log_info(f"Аудиопоток микрофона открыт и слушает (KWS активен: {self.kws_engine.has_models})")
+                    log_info(f"Аудиопоток микрофона открыт и слушает (KWS активен: {self.kws_engine.has_models}, AEC: {self.aec.state_description})")
 
                     while self._running and not self._is_paused:
                         block, overflowed = stream.read(block_size)
@@ -365,7 +370,20 @@ class VoiceListener:
                         if overflowed:
                             log_warning("Audio buffer overflowed")
 
-                        block_flat = block.flatten().astype(np.float32)
+                        raw_block_flat = block.flatten().astype(np.float32)
+
+                        # Локальное эхоподавление (WebRTC APM AEC3)
+                        block_flat = self.aec.process_mic_block(raw_block_flat)
+
+                        # Проверка завершения фоновой сессии диагностики AEC
+                        diag_result = self.aec.update_diagnostic_state()
+                        if diag_result is not None:
+                            erle = diag_result.get("erle_db", 0.0)
+                            manifest = diag_result.get("manifest_path", "")
+                            log_info(f"Сессия диагностики AEC завершена: ERLE = {erle:.2f} dB, манифест: {manifest}")
+                            if self.on_log:
+                                self.on_log(f"[bold green]✓ Диагностика AEC завершена:[/bold green] Подавление эха: [bold cyan]{erle:.1f} дБ[/bold cyan]")
+
                         rms = float(np.sqrt(np.mean(block_flat**2)))
                         music_active = self.is_music_playing() if self.is_music_playing else False
 

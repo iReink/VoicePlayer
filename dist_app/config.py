@@ -13,7 +13,8 @@ DEFAULT_SETTINGS = {
     "volume": 70,
     "voice": "xenia",
     "live_model": "models/gemini-3.8-live",
-    "live_voice": "auto"
+    "live_voice": "auto",
+    "aec_enabled": True
 }
 
 class ConfigManager:
@@ -91,4 +92,13 @@ class ConfigManager:
     @live_voice.setter
     def live_voice(self, value: str):
         self.settings["live_voice"] = value.strip()
+        self.save()
+
+    @property
+    def aec_enabled(self) -> bool:
+        return self.settings.get("aec_enabled", True)
+
+    @aec_enabled.setter
+    def aec_enabled(self, value: bool):
+        self.settings["aec_enabled"] = bool(value)
         self.save()

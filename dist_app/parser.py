@@ -43,6 +43,14 @@ class CommandParser:
         if not clean_text:
             return {"action": "NONE"}
 
+        # 1.1 Обращение к ассистенту по имени без команды (только триггер)
+        if clean_text in [
+            "морсик", "морсика", "морсику", "морфик", "горсик",
+            "карлуша", "корлуша", "карлушка", "карлуше",
+            "эй висп", "висп", "виспа", "эй", "hey wisp", "wisp", "ei vispa", "morsik", "karlusha"
+        ]:
+            return {"action": "TRIGGER_ACTIVATED"}
+
         # 2. Запросы триггера (wake-word)
         if re.search(r'\b(?:какой|скажи|напомни)\s+(?:сейчас\s+)?триг+ер\b', clean_text):
             return {"action": "GET_TRIGGER"}
@@ -52,6 +60,27 @@ class CommandParser:
         if change_trig and any(w in clean_text for w in ["смени", "теперь", "новый", "поменяй"]):
             new_val = change_trig.group(1).strip().capitalize()
             return {"action": "SET_TRIGGER", "new_trigger": new_val}
+
+        # 2.1 Управление эхоподавлением (AEC)
+        if clean_text in [
+            "включи эхоподавление", "включить эхоподавление", "включи аек", "включить аек", "включи aec", "включить aec"
+        ] or re.search(r'\b(?:включи(?:ть)?|активируй|запусти)\s+(?:эхоподавление|аек|aec)\b', clean_text):
+            return {"action": "SET_AEC", "enabled": True}
+
+        if clean_text in [
+            "выключи эхоподавление", "выключить эхоподавление", "отключи эхоподавление", "выключи аек", "отключи аек", "выключи aec"
+        ] or re.search(r'\b(?:выключи(?:ть)?|отключи(?:ть)?|деактивируй)\s+(?:эхоподавление|аек|aec)\b', clean_text):
+            return {"action": "SET_AEC", "enabled": False}
+
+        if clean_text in [
+            "статус эхоподавления", "эхоподавление", "что с эхоподавлением", "аек", "aec", "статус аек"
+        ] or re.search(r'\b(?:статус|состояние)\s+(?:эхоподавления|аек|aec)\b', clean_text):
+            return {"action": "GET_AEC"}
+
+        if clean_text in [
+            "тест эхоподавления", "тест эхо", "запиши диагностику", "диагностика эхоподавления", "диагностика", "диагностика aec"
+        ] or re.search(r'\b(?:тест|диагностика)\s+(?:эхоподавления|аек|aec|эхо)\b', clean_text):
+            return {"action": "AEC_DIAGNOSTIC"}
 
         # 3. Голос ассистента и голосовое меню
         if re.search(r'\b(?:какой|скажи|напомни)\s+(?:сейчас\s+)?голос\b', clean_text):

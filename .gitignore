@@ -36,4 +36,5 @@ dist/
 # Scratch & temporary files
 scratch/
 patch_temp/
+outputs/
 *.tmp

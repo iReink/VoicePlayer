@@ -58,6 +58,7 @@ def print_help(current_trigger: str):
     table.add_row("Лайки", "лайк (+) / дизлайк (-)")
     table.add_row("Информация", "что играет / инфо / очередь")
     table.add_row("Live-диалог", "«поговори со мной» / «давай поболтаем» / «подожди»")
+    table.add_row("Эхоподавление (AEC)", "включи/выключи эхоподавление / статус аек / тест эхоподавления")
     table.add_row("Ключи и токены", "сменить токен / сменить api ключ")
     table.add_row("Выход", "выход / exit / q")
     
@@ -190,6 +191,7 @@ def main():
         f"Громкость: [bold yellow]{player.volume}%[/bold yellow]\n"
         f"{trigger_line} | "
         f"Голос: [bold cyan]{active_v_name}[/bold cyan] (скажите: «сменить голос»)\n"
+        f"Эхоподавление (AEC): [bold green]{voice_listener.aec.state_description}[/bold green]\n"
         f"[dim]Логирование активно в: {LOG_FILE.name} | 'помощь' — список команд[/dim]"
     )
     console.print(Panel(banner_text, border_style="cyan"))
@@ -464,6 +466,43 @@ def main():
                         voice_listener.set_force_command_mode(False)
                         if was_playing:
                             player.fade_in_resume(duration=0.4)
+
+                # Управление эхоподавлением (AEC)
+                elif action == "SET_AEC":
+                    params = cmd.get("params", {})
+                    enabled = cmd.get("enabled", params.get("enabled", True))
+                    voice_listener.aec.set_enabled(enabled)
+                    config.aec_enabled = enabled
+                    state_str = "включено" if enabled else "выключено"
+                    console.print(f"[bold cyan]Эхоподавление (AEC):[/bold cyan] [bold yellow]{state_str}[/bold yellow] ({voice_listener.aec.state_description})")
+                    tts_text = f"Эхоподавление {state_str}."
+                    tts.say(tts_text, pause_music=False)
+
+                elif action == "GET_AEC":
+                    diag_info = voice_listener.aec.get_last_diagnostic_summary()
+                    console.print(Panel(
+                        f"[bold cyan]Состояние системы эхоподавления (AEC):[/bold cyan]\n"
+                        f"• Статус: [bold green]{voice_listener.aec.state_description}[/bold green]\n"
+                        f"• Активация: [bold white]{'Включено' if voice_listener.aec.enabled else 'Выключено'}[/bold white]\n"
+                        f"• Последнее подавление (ERLE): [bold yellow]{diag_info}[/bold yellow]",
+                        title="[Acoustic Echo Cancellation]",
+                        border_style="cyan",
+                        expand=False
+                    ))
+                    tts_msg = f"Эхоподавление {voice_listener.aec.state_description}."
+                    tts.say(tts_msg, pause_music=False)
+
+                elif action == "AEC_DIAGNOSTIC":
+                    console.print(Panel(
+                        "[bold yellow]Запуск калибровки и сбора сессии диагностики AEC...[/bold yellow]\n"
+                        "В течение 8 секунд система запишет вход микрофона и выход динамиков,\n"
+                        "после чего рассчитает точный коэффициент подавления эха (ERLE) в дБ.",
+                        title="[Тест эхоподавления]",
+                        border_style="yellow",
+                        expand=False
+                    ))
+                    tts.say("Запускаю диагностику эхоподавления. Слушаю восемь секунд.", pause_music=False)
+                    voice_listener.aec.start_diagnostic_session(duration_s=8.0)
 
                 # Справка
                 elif action == "HELP":

@@ -58,6 +58,7 @@ def print_help(current_trigger: str):
     table.add_row("Лайки", "лайк (+) / дизлайк (-)")
     table.add_row("Информация", "что играет / инфо / очередь")
     table.add_row("Live-диалог", "«поговори со мной» / «давай поболтаем» / «подожди»")
+    table.add_row("Эхоподавление (AEC)", "включи/выключи эхоподавление / статус аек / тест эхоподавления")
     table.add_row("Ключи и токены", "сменить токен / сменить api ключ")
     table.add_row("Выход", "выход / exit / q")
     
@@ -115,18 +116,27 @@ def main():
             console.print("[bold red][REC] [Запись речи...][/bold red]")
         elif status == "TRANSCRIBING":
             console.print("[bold yellow][~] [Распознавание речи...][/bold yellow]")
+        elif status == "LISTENING":
+            console.print("[bold green]🎙 [Слушаю команду...][/bold green]")
+
+    def on_wake_word(model_name: str):
+        names = {
+            "morsik": "🐾 «Морсик»",
+            "karlusha": "🦅 «Карлуша»",
+            "hey_wisp": "⚡ «Эй, Висп!»"
+        }
+        pretty_name = names.get(model_name, f"«{model_name}»")
+        console.print(f"[bold cyan]🔔 [KWS Активация: {pretty_name}][/bold cyan]")
+        player.duck(True)
 
     def on_speech_start():
-        # Не приглушаем музыку по голому RMS шума,
-        # чтобы вокал и биты из колонок не вызывали пульсирующий дакинг
-        pass
+        player.duck(True)
 
     def on_speech_end(recognized: bool):
-        pass
+        if not recognized:
+            player.duck(False)
 
     def on_voice_command(cmd_text: str, raw_text: str):
-        # Дакинг выполняется непосредственно в tts.say при ответе,
-        # чтобы музыка не приглушалась вхолостую при паузах, остановках и меню
         cmd_queue.put(("VOICE", cmd_text, raw_text))
 
     def on_voice_log(msg: str):
@@ -139,7 +149,8 @@ def main():
         on_speech_start=on_speech_start,
         on_speech_end=on_speech_end,
         on_log=on_voice_log,
-        is_music_playing=lambda: player.is_playing
+        is_music_playing=lambda: player.is_playing,
+        on_wake_word=on_wake_word
     )
     voice_listener.start()
 
@@ -167,13 +178,20 @@ def main():
 
     # Приветственный баннер
     active_v_name = AVAILABLE_VOICES.get(config.voice, {}).get("name", config.voice)
+    if voice_listener.kws_engine.has_models:
+        active_trigs_str = ", ".join(voice_listener.kws_engine.active_trigger_names)
+        trigger_line = f"Триггеры (KWS): [bold magenta]{active_trigs_str}[/bold magenta]"
+    else:
+        trigger_line = f"Триггер: [bold magenta]{config.trigger}[/bold magenta]"
+
     banner_text = (
         f"[bold cyan]=== Голосовой и текстовый ассистент Яндекс.Музыки ===[/bold cyan]\n"
         f"Пользователь: [bold white]{service.user_name}[/bold white] | "
         f"Подписка Плюс: [bold green]{'Активна' if service.has_plus else 'Нет'}[/bold green] | "
         f"Громкость: [bold yellow]{player.volume}%[/bold yellow]\n"
-        f"Триггер: [bold magenta]{config.trigger}[/bold magenta] | "
+        f"{trigger_line} | "
         f"Голос: [bold cyan]{active_v_name}[/bold cyan] (скажите: «сменить голос»)\n"
+        f"Эхоподавление (AEC): [bold green]{voice_listener.aec.state_description}[/bold green]\n"
         f"[dim]Логирование активно в: {LOG_FILE.name} | 'помощь' — список команд[/dim]"
     )
     console.print(Panel(banner_text, border_style="cyan"))
@@ -293,12 +311,19 @@ def main():
                     log_info(f"Получена текстовая команда: '{cmd_text}'")
 
                 if cmd_text == "триггер_активирован":
-                    tts.say("Слушаю вас")
+                    tts.say("Слушаю вас", keep_ducked=True)
+                    voice_listener.open_command_window(6.0)
                     continue
 
                 cmd = nlu.parse(cmd_text)
                 action = cmd["action"]
                 log_debug(f"Action: {action}, data: {cmd}")
+
+                # Активация по имени без команды
+                if action == "TRIGGER_ACTIVATED":
+                    tts.say("Слушаю вас", keep_ducked=True)
+                    voice_listener.open_command_window(6.0)
+                    continue
 
                 # Выход
                 if action == "EXIT":
@@ -335,17 +360,22 @@ def main():
 
                 # Запрос текущего триггера
                 elif action == "GET_TRIGGER":
-                    cur_trig = config.trigger
-                    console.print(f"[bold cyan]Текущий триггер:[/bold cyan] [bold yellow]{cur_trig}[/bold yellow]")
-                    tts.say(f"Текущий триггер — {cur_trig}", pause_music=False)
+                    if voice_listener.kws_engine.has_models:
+                        trig_list = ", ".join(voice_listener.kws_engine.active_trigger_names)
+                        console.print(f"[bold cyan]Активные триггеры KWS:[/bold cyan] [bold yellow]{trig_list}[/bold yellow]")
+                        tts.say(f"Активны триггеры: {trig_list}", pause_music=False)
+                    else:
+                        cur_trig = config.trigger
+                        console.print(f"[bold cyan]Текущий триггер:[/bold cyan] [bold yellow]{cur_trig}[/bold yellow]")
+                        tts.say(f"Текущий триггер — {cur_trig}", pause_music=False)
 
                 # Смена триггера
                 elif action == "SET_TRIGGER":
                     new_trig = cmd["new_trigger"]
                     config.trigger = new_trig
-                    console.print(f"[bold green][OK] Триггер успешно изменён на:[/bold green] [bold yellow]{new_trig}[/bold yellow]")
-                    tts.say(f"Триггер изменён на {new_trig}", pause_music=False)
-                    log_info(f"Триггер изменен на: {new_trig}")
+                    console.print(f"[bold green][OK] Основной триггер изменён на:[/bold green] [bold yellow]{new_trig}[/bold yellow]")
+                    tts.say(f"Основной триггер изменён на {new_trig}", pause_music=False)
+                    log_info(f"Основной триггер изменен на: {new_trig}")
 
                 # Запрос текущего голоса
                 elif action == "GET_VOICE":
@@ -436,6 +466,43 @@ def main():
                         voice_listener.set_force_command_mode(False)
                         if was_playing:
                             player.fade_in_resume(duration=0.4)
+
+                # Управление эхоподавлением (AEC)
+                elif action == "SET_AEC":
+                    params = cmd.get("params", {})
+                    enabled = cmd.get("enabled", params.get("enabled", True))
+                    voice_listener.aec.set_enabled(enabled)
+                    config.aec_enabled = enabled
+                    state_str = "включено" if enabled else "выключено"
+                    console.print(f"[bold cyan]Эхоподавление (AEC):[/bold cyan] [bold yellow]{state_str}[/bold yellow] ({voice_listener.aec.state_description})")
+                    tts_text = f"Эхоподавление {state_str}."
+                    tts.say(tts_text, pause_music=False)
+
+                elif action == "GET_AEC":
+                    diag_info = voice_listener.aec.get_last_diagnostic_summary()
+                    console.print(Panel(
+                        f"[bold cyan]Состояние системы эхоподавления (AEC):[/bold cyan]\n"
+                        f"• Статус: [bold green]{voice_listener.aec.state_description}[/bold green]\n"
+                        f"• Активация: [bold white]{'Включено' if voice_listener.aec.enabled else 'Выключено'}[/bold white]\n"
+                        f"• Последнее подавление (ERLE): [bold yellow]{diag_info}[/bold yellow]",
+                        title="[Acoustic Echo Cancellation]",
+                        border_style="cyan",
+                        expand=False
+                    ))
+                    tts_msg = f"Эхоподавление {voice_listener.aec.state_description}."
+                    tts.say(tts_msg, pause_music=False)
+
+                elif action == "AEC_DIAGNOSTIC":
+                    console.print(Panel(
+                        "[bold yellow]Запуск калибровки и сбора сессии диагностики AEC...[/bold yellow]\n"
+                        "В течение 8 секунд система запишет вход микрофона и выход динамиков,\n"
+                        "после чего рассчитает точный коэффициент подавления эха (ERLE) в дБ.",
+                        title="[Тест эхоподавления]",
+                        border_style="yellow",
+                        expand=False
+                    ))
+                    tts.say("Запускаю диагностику эхоподавления. Слушаю восемь секунд.", pause_music=False)
+                    voice_listener.aec.start_diagnostic_session(duration_s=8.0)
 
                 # Справка
                 elif action == "HELP":
@@ -759,6 +826,10 @@ def main():
             except Exception as e:
                 log_error(f"Исключение при выполнении команды '{cmd_text}': {e}")
                 console.print(f"[bold red]Ошибка обработки команды:[/bold red] {e} (подробности в {LOG_FILE.name})")
+                try:
+                    player.duck(False)
+                except Exception:
+                    pass
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Завершение работы (Ctrl+C)... До встречи![/yellow]")
