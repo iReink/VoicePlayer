@@ -152,6 +152,17 @@ def train_all_models(epochs: int = 10, lr: float = 0.003, is_fine_tune: bool = F
             "file": onnx_file.name
         }
 
+        # Автоматическое развёртывание обученных моделей в VoicePlayer
+        for target_dir in [BASE_DIR.parent / "models" / "kws", BASE_DIR.parent / "dist_app" / "models" / "kws"]:
+            if target_dir.exists():
+                try:
+                    import shutil
+                    for f in MODELS_DIR.glob(f"{target_key}.onnx*"):
+                        shutil.copy2(f, target_dir / f.name)
+                except Exception as e:
+                    print(f"  [!] Ошибка автокопирования в {target_dir}: {e}")
+        print(f"  [OK] Модель автоматически развернута в ассистент", flush=True)
+
     # Логирование в журнал обучений
     log_entry = {
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
