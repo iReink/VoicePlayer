@@ -152,8 +152,8 @@ class KWSEngine:
     def __init__(
         self,
         models_dir: Optional[pathlib.Path] = None,
-        threshold: float = 0.80,
-        cooldown_sec: float = 1.8
+        threshold: float = 0.85,
+        cooldown_sec: float = 2.0
     ):
         self.models_dir = pathlib.Path(models_dir) if models_dir else DEFAULT_KWS_MODELS_DIR
         self.threshold = threshold
@@ -218,9 +218,9 @@ class KWSEngine:
         if now - self.last_trigger_time < self.cooldown_sec:
             return None
 
-        # Быстрый RMS чек: если абсолютная тишина (< -50 dB), пропускаем инференс
+        # Быстрый RMS чек: если уровень сигнала слишком низкий (< -42 dB), пропускаем инференс
         rms = np.sqrt(np.mean(audio_window_16k ** 2))
-        if rms < 0.005:
+        if rms < 0.008:
             return None
 
         mel = extract_mel_spectrogram(audio_window_16k)

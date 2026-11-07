@@ -286,6 +286,7 @@ class MusicPlayer:
                 self._current_stream = io.BytesIO(data)
                 pygame.mixer.music.load(self._current_stream)
                 pygame.mixer.music.play()
+                self._is_ducked = False
                 pygame.mixer.music.set_volume(self._volume)
             except Exception:
                 self._is_loading = False

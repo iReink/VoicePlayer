@@ -175,11 +175,12 @@ class TTSEngine:
                 )
         return audio_tensor.detach().cpu().numpy()
 
-    def say(self, text: str, pause_music: bool = False, voice: Optional[str] = None):
+    def say(self, text: str, pause_music: bool = False, voice: Optional[str] = None, keep_ducked: bool = False):
         """
         Произносит текст через sounddevice:
         - При pause_music=True (длинные ответы, меню) плавно гасит музыку за 0.5с и возобновляет после ответа.
         - При pause_music=False (короткие ответы) применяет ducking (приглушение до 15%).
+        - При keep_ducked=True оставляет музыку приглушённой после завершения речи (для ожидания команды).
         """
         if not text or not text.strip():
             return
@@ -222,8 +223,8 @@ class TTSEngine:
                 except Exception:
                     pass
 
-            # Возврат звука после воспроизведения ответа
-            if self.player and was_playing:
+            # Возврат звука после воспроизведения ответа (если не запрошено оставить приглушённым)
+            if not keep_ducked and self.player and was_playing:
                 if pause_music:
                     self.player.fade_in_resume(duration=0.5)
                 else:

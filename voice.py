@@ -423,33 +423,41 @@ class VoiceListener:
                                 if blocks_since_kws >= 2 and len(kws_ring_buffer) >= (ring_buffer_blocks // 2):
                                     blocks_since_kws = 0
                                     window_16k = np.concatenate(list(kws_ring_buffer))
-                                    kws_res = self.kws_engine.process_audio(window_16k)
-                                    if kws_res is not None:
-                                        log_info(f"🔔 KWS обнаружен: «{kws_res.model_name}» ({kws_res.probability*100:.1f}%)")
-                                        kws_trigger_name = kws_res.model_name
-                                        is_kws_command = True
-                                        is_recording = True
-                                        silence_blocks = 0
+                                    # Валидация человеческой речи через Silero VAD перед KWS
+                                    # Исключает ложные срабатывания от шума кулеров, фонового шипения и шорохов
+                                    has_speech = True
+                                    if vad_model is not None:
+                                        v_probs = [float(np.max(vad_model(window_16k[i:i+512]))) for i in range(0, len(window_16k) - 512, 1024)]
+                                        has_speech = max(v_probs) >= 0.40
 
-                                        if self.on_wake_word:
-                                            try:
-                                                self.on_wake_word(kws_res.model_name)
-                                            except Exception:
-                                                pass
+                                    if has_speech:
+                                        kws_res = self.kws_engine.process_audio(window_16k)
+                                        if kws_res is not None:
+                                            log_info(f"🔔 KWS обнаружен: «{kws_res.model_name}» ({kws_res.probability*100:.1f}%)")
+                                            kws_trigger_name = kws_res.model_name
+                                            is_kws_command = True
+                                            is_recording = True
+                                            silence_blocks = 0
 
-                                        play_wake_chime_async()
+                                            if self.on_wake_word:
+                                                try:
+                                                    self.on_wake_word(kws_res.model_name)
+                                                except Exception:
+                                                    pass
 
-                                        if self.on_speech_start:
-                                            try:
-                                                self.on_speech_start()
-                                            except Exception:
-                                                pass
+                                            play_wake_chime_async()
 
-                                        # Сохраняем последние 5 блоков (~320 мс) как pre-roll,
-                                        # чтобы не обрезать начало команды при слитном произнесении
-                                        audio_buffer = list(kws_ring_buffer)[-5:]
-                                        self._notify_status("RECORDING")
-                                        continue
+                                            if self.on_speech_start:
+                                                try:
+                                                    self.on_speech_start()
+                                                except Exception:
+                                                    pass
+
+                                            # Сохраняем последние 5 блоков (~300 мс) как pre-roll
+                                            audio_buffer = list(kws_ring_buffer)[-5:] if len(kws_ring_buffer) >= 5 else list(kws_ring_buffer)
+                                            kws_ring_buffer.clear()
+                                            self._notify_status("RECORDING")
+                                            continue
                             else:
                                 # Legacy режим без KWS (или принудительный ввод команды в меню)
                                 if vad_model is not None:
@@ -486,6 +494,7 @@ class VoiceListener:
 
                                 if silence_blocks >= max_silence_blocks or len(audio_buffer) >= max_speech_blocks:
                                     is_recording = False
+                                    kws_ring_buffer.clear()
                                     duration_s = len(audio_buffer) * block_size / sample_rate
                                     log_debug(f"Окончание речи. Записано {len(audio_buffer)} блоков (~{duration_s:.2f} сек)")
                                     self._notify_status("TRANSCRIBING")
