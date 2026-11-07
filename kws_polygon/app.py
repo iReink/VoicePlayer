@@ -479,4 +479,16 @@ if __name__ == '__main__':
 ======================================================================
 """
     print(banner)
-    web.run_app(app, host='0.0.0.0', port=PORT, ssl_context=ssl_context)
+    if sys.platform == "win32":
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        def _silence_winerror_10054(loop, context):
+            exc = context.get("exception")
+            if isinstance(exc, (ConnectionResetError, ConnectionAbortedError)) or getattr(exc, 'winerror', None) == 10054:
+                return
+            loop.default_exception_handler(context)
+        loop.set_exception_handler(_silence_winerror_10054)
+        web.run_app(app, host='0.0.0.0', port=PORT, ssl_context=ssl_context, loop=loop)
+    else:
+        web.run_app(app, host='0.0.0.0', port=PORT, ssl_context=ssl_context)
