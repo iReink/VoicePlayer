@@ -19,6 +19,15 @@ import scipy.io.wavfile
 import scipy.signal
 from aiohttp import web
 
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 # Добавляем текущую директорию в sys.path
 BASE_DIR = pathlib.Path(__file__).parent.resolve()
 if str(BASE_DIR) not in sys.path:
@@ -49,7 +58,7 @@ def reload_detectors():
         model_path = MODELS_DIR / cfg["file"]
         if model_path.exists():
             detectors[key] = ONNXWakeWordDetector(str(model_path))
-            print(f"[✓] Загружена модель: {cfg['name']} -> {model_path.name}")
+            print(f"[OK] Загружена модель: {cfg['name']} -> {model_path.name}")
         else:
             print(f"[!] Файл модели не найден: {model_path}")
 
@@ -134,7 +143,7 @@ def ensure_ssl_certs():
             ))
         with open(cert_path, "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
-        print(f"[✓] SSL-сертификат создан: {cert_path}")
+        print(f"[OK] SSL-сертификат создан: {cert_path}")
 
     return str(cert_path), str(key_path)
 

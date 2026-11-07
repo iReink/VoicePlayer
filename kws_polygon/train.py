@@ -11,6 +11,15 @@ import datetime
 import numpy as np
 import torch
 
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from model_def import KWSNet, export_to_onnx, train_kws_head, ONNXWakeWordDetector
 from audio_features import extract_mel_spectrogram
 
@@ -130,9 +139,9 @@ def train_all_models(epochs: int = 10, lr: float = 0.003, is_fine_tune: bool = F
         avg_neg_prob = float(np.mean(sample_neg))
         acc = float(np.mean([p >= 0.5 for p in sample_pos] + [n < 0.5 for n in sample_neg])) * 100.0
 
-        print(f"  [✓] Экспортирован: {onnx_file.name} ({file_size_kb:.1f} КБ)", flush=True)
-        print(f"  [✓] Время обучения: {train_time:.1f}с | Final Loss: {losses[-1]:.4f} | Точность теста: {acc:.1f}%", flush=True)
-        print(f"  [✓] Средняя вероятность (POS): {avg_pos_prob:.3f} | Средняя вероятность (NEG): {avg_neg_prob:.3f}", flush=True)
+        print(f"  [OK] Экспортирован: {onnx_file.name} ({file_size_kb:.1f} КБ)", flush=True)
+        print(f"  [OK] Время обучения: {train_time:.1f}с | Final Loss: {losses[-1]:.4f} | Точность теста: {acc:.1f}%", flush=True)
+        print(f"  [OK] Средняя вероятность (POS): {avg_pos_prob:.3f} | Средняя вероятность (NEG): {avg_neg_prob:.3f}", flush=True)
 
         results_summary[target_key] = {
             "name": MODELS_CONFIG[target_key]["name"],
@@ -163,7 +172,7 @@ def train_all_models(epochs: int = 10, lr: float = 0.003, is_fine_tune: bool = F
     with open(TRAIN_HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[✓] Запись сохранена в журнал обучений: {TRAIN_HISTORY_FILE}")
+    print(f"\n[OK] Запись сохранена в журнал обучений: {TRAIN_HISTORY_FILE}")
     return log_entry
 
 if __name__ == "__main__":
