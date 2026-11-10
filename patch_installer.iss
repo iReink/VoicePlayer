@@ -22,6 +22,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "dist_app\main.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_app\voice.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_app\vad_engine.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_app\kws_engine.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_app\aec_engine.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_app\tts.py"; DestDir: "{app}"; Flags: ignoreversion

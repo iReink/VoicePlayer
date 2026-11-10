@@ -32,9 +32,10 @@ from rich.panel import Panel
 from logger import log_info, log_warning, log_error
 from search_service import SearchService
 try:
-    from faster_whisper.vad import get_vad_model
+    from vad_engine import get_stateful_vad, StatefulSileroVAD
 except ImportError:
-    get_vad_model = None
+    get_stateful_vad = None
+    StatefulSileroVAD = None
 
 try:
     from voice import is_whisper_hallucination
@@ -302,13 +303,13 @@ class LiveSessionManager:
             }
             await ws.send(json.dumps(msg))
 
-        # Инициализация Silero VAD для точного отсечения шумов микрофона
-        vad_model = None
-        if get_vad_model is not None:
+        # Инициализация потокового Silero VAD для точного отсечения шумов микрофона
+        vad = None
+        if get_stateful_vad is not None:
             try:
-                vad_model = get_vad_model()
+                vad = get_stateful_vad()
             except Exception:
-                vad_model = None
+                vad = None
 
         # Открываем микрофон 16kHz
         with sd.RawInputStream(samplerate=16000, channels=1, dtype='int16', blocksize=1024, callback=mic_callback):
@@ -326,19 +327,18 @@ class LiveSessionManager:
                 chunk_float = shorts.astype(np.float32) / 32768.0
                 rms = float(np.sqrt(np.mean(chunk_float**2)))
 
-                # Нейросетевая вероятность речи Silero VAD
+                # Нейросетевая вероятность речи Silero VAD (потоковая, без порчи буфера)
                 vad_prob = 0.0
-                if vad_model is not None and rms > 0.006:
+                if vad is not None and rms > 0.006:
                     try:
-                        vad_res = vad_model(chunk_float)
-                        vad_prob = float(np.max(vad_res))
+                        vad_prob, _ = vad.process_block(chunk_float)
                     except Exception:
                         vad_prob = 0.0
 
                 # 1. Если сейчас говорит ассистент — отслеживаем только устойчивое громкое перебивание (Barge-in)
                 if self.is_assistant_speaking:
                     # Требуется явный человеческий голос (не эхо из колонок и не шумы ПК)
-                    is_barge = (vad_prob >= 0.70 and rms > 0.050) if vad_model else (rms > 0.060)
+                    is_barge = (vad_prob >= 0.70 and rms > 0.050) if vad else (rms > 0.060)
                     if is_barge:
                         barge_in_blocks += 1
                         if barge_in_blocks >= 3:  # Требуется минимум ~200 мс громкого голоса
@@ -361,14 +361,16 @@ class LiveSessionManager:
                                 await send_audio_chunk(pr)
                             pre_roll.clear()
                             await send_audio_chunk(pcm_data)
+                            if vad is not None:
+                                vad.reset()
                     else:
                         barge_in_blocks = 0
                         pre_roll.append(pcm_data)
                     continue
 
                 # 2. Ассистент молчит — нейросетевой VAD пользователя
-                if vad_model is not None:
-                    # Вентиляторы/гул дают prob ~0.02-0.05 (игнорируются)
+                if vad is not None:
+                    # Вентиляторы/гул дают prob ~0.005-0.01 (игнорируются)
                     if not is_user_speaking:
                         is_speech = (vad_prob >= 0.55 and rms >= 0.012)
                     else:
@@ -411,6 +413,8 @@ class LiveSessionManager:
                             # Фраза завершена (пользователь замолчал на ~750 мс)
                             is_user_speaking = False
                             silence_blocks_count = 0
+                            if vad is not None:
+                                vad.reset()
 
                             saved_audio = list(user_audio_buffer)
                             user_audio_buffer = []

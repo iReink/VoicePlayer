@@ -14,10 +14,7 @@ import numpy as np
 import sounddevice as sd
 import ctranslate2
 from faster_whisper import WhisperModel
-try:
-    from faster_whisper.vad import get_vad_model
-except ImportError:
-    get_vad_model = None
+from vad_engine import get_stateful_vad, StatefulSileroVAD
 
 from logger import log_debug, log_info, log_warning, log_error
 from kws_engine import KWSEngine, play_wake_chime_async
@@ -216,7 +213,7 @@ class VoiceListener:
         self.is_music_playing = is_music_playing
         self.on_wake_word = on_wake_word
 
-        self.kws_engine = KWSEngine(threshold=0.80)
+        self.kws_engine = KWSEngine(threshold=0.85)
         self.aec = AECFrontend(enabled=getattr(self.config, 'aec_enabled', True))
 
         self._running = False
@@ -315,13 +312,12 @@ class VoiceListener:
         max_speech_blocks = int(8.0 / (block_size / sample_rate))    # максимум 8 сек
         
         # Инициализация нейросетевого VAD (Silero) для устойчивого отсечения шумов вентиляторов, эха и колонок
-        vad_model = None
-        if get_vad_model is not None:
-            try:
-                vad_model = get_vad_model()
-                log_info("Нейросетевой VAD (Silero) успешно инициализирован")
-            except Exception as e:
-                log_warning(f"Не удалось загрузить Silero VAD ({e}), используется адаптивный RMS детектор")
+        # Инициализация нейросетевого VAD (Silero) с сохранением состояния
+        vad = get_stateful_vad()
+        if vad is not None:
+            log_info("Потоковый Silero VAD (stateful) успешно инициализирован")
+        else:
+            log_warning("Не удалось загрузить Silero VAD, используется адаптивный RMS детектор")
 
         consecutive_unrecognized = 0
         backoff_until = 0.0
@@ -361,6 +357,8 @@ class VoiceListener:
                             audio_buffer = []
                             silence_blocks = 0
                             kws_ring_buffer.clear()
+                            if vad is not None:
+                                vad.reset()
                             continue
 
                         now = time.time()
@@ -387,16 +385,15 @@ class VoiceListener:
                         rms = float(np.sqrt(np.mean(block_flat**2)))
                         music_active = self.is_music_playing() if self.is_music_playing else False
 
-                        # Оценка вероятности речи нейросетью Silero VAD
+                        # Оценка вероятности речи нейросетью Silero VAD (потоковая, без порчи массива)
                         vad_prob = 0.0
-                        if vad_model is not None and rms > 0.005:
-                            try:
-                                # Silero VAD требует размерность, кратную 512 сэмплам.
-                                # Для 960 сэмплов берём два 512-сэмпловых среза (начало и конец)
-                                vad_res1 = vad_model(block_flat[:512])
-                                vad_res2 = vad_model(block_flat[-512:])
-                                vad_prob = max(float(np.max(vad_res1)), float(np.max(vad_res2)))
-                            except Exception as e:
+                        if vad is not None:
+                            if rms > 0.005:
+                                try:
+                                    vad_prob, _ = vad.process_block(block_flat)
+                                except Exception:
+                                    vad_prob = 0.0
+                            else:
                                 vad_prob = 0.0
 
                         # Адаптация шумового фона для fallback
@@ -423,12 +420,12 @@ class VoiceListener:
                                 if blocks_since_kws >= 2 and len(kws_ring_buffer) >= (ring_buffer_blocks // 2):
                                     blocks_since_kws = 0
                                     window_16k = np.concatenate(list(kws_ring_buffer))
-                                    # Валидация человеческой речи через Silero VAD перед KWS
+                                    # Валидация человеческой речи через потоковый Silero VAD перед KWS
                                     # Исключает ложные срабатывания от шума кулеров, фонового шипения и шорохов
-                                    has_speech = True
-                                    if vad_model is not None:
-                                        v_probs = [float(np.max(vad_model(window_16k[i:i+512]))) for i in range(0, len(window_16k) - 512, 1024)]
-                                        has_speech = max(v_probs) >= 0.40
+                                    if vad is not None:
+                                        has_speech = vad.has_sustained_speech(threshold=0.50, min_frames=2)
+                                    else:
+                                        has_speech = (rms >= 0.012)
 
                                     if has_speech:
                                         kws_res = self.kws_engine.process_audio(window_16k)
@@ -460,7 +457,7 @@ class VoiceListener:
                                             continue
                             else:
                                 # Legacy режим без KWS (или принудительный ввод команды в меню)
-                                if vad_model is not None:
+                                if vad is not None:
                                     min_prob = 0.70 if (music_active and consecutive_unrecognized >= 2) else 0.45
                                     is_voice = (vad_prob >= min_prob) and (rms >= 0.008)
                                 else:
@@ -482,7 +479,7 @@ class VoiceListener:
                             # Идёт запись команды
                             audio_buffer.append(block_flat.copy())
 
-                            if vad_model is not None:
+                            if vad is not None:
                                 is_voice = (vad_prob >= 0.20) or (rms >= 0.009)
                             else:
                                 is_voice = rms > max(0.010, noise_floor * 1.5)
@@ -495,6 +492,8 @@ class VoiceListener:
                                 if silence_blocks >= max_silence_blocks or len(audio_buffer) >= max_speech_blocks:
                                     is_recording = False
                                     kws_ring_buffer.clear()
+                                    if vad is not None:
+                                        vad.reset()
                                     duration_s = len(audio_buffer) * block_size / sample_rate
                                     log_debug(f"Окончание речи. Записано {len(audio_buffer)} блоков (~{duration_s:.2f} сек)")
                                     self._notify_status("TRANSCRIBING")
@@ -506,11 +505,11 @@ class VoiceListener:
                                     if len(audio_buffer) >= min_speech_blocks:
                                         audio_data = np.concatenate(audio_buffer, axis=0)
                                         recognized = self._process_audio(
-                                            model,
-                                            audio_data,
-                                            kws_trigger=kws_trigger_name if is_kws_command else None,
-                                            in_command_window=was_in_command_window
-                                        )
+                                             model,
+                                             audio_data,
+                                             kws_trigger=kws_trigger_name if is_kws_command else None,
+                                             in_command_window=was_in_command_window
+                                         )
                                     else:
                                         log_debug("Слишком короткий сегмент аудио, пропуск")
 
@@ -533,6 +532,8 @@ class VoiceListener:
                                     is_kws_command = False
                                     kws_trigger_name = None
                                     kws_ring_buffer.clear()
+                                    if vad is not None:
+                                        vad.reset()
 
             except Exception as e:
                 log_error(f"Ошибка в цикле микрофона: {e}")
@@ -592,10 +593,7 @@ class VoiceListener:
         if is_whisper_hallucination(clean_raw):
             log_info(f"Отфильтрована галлюцинация Whisper: '{clean_raw}'")
             if kws_trigger:
-                # KWS гарантированно сработал, но в аудио только тишина/галлюцинация -> пользователь просто позвал ассистента
-                log_info(f"KWS «{kws_trigger}» активирован, но команда не последовала (тишина)")
-                self.on_command("триггер_активирован", raw_text)
-                return True
+                log_info(f"KWS «{kws_trigger}» активирован, но распознана галлюцинация тишины (пропуск)")
             return False
 
         if not clean_raw or len(clean_raw) < 2:
@@ -608,9 +606,14 @@ class VoiceListener:
 
         # 0. Режим прямого ответа без триггера (меню или активное окно после «Слушаю вас»)
         if self._force_command_mode or in_command_window:
+            # Защита от зацикливания: если в окне команды тишина — закрываем окно, не вызывая повторно триггер
+            if not text_lower or len(text_lower) < 2:
+                log_debug("В окне команды тишина — закрытие окна")
+                return False
+
             cmd_clean = strip_wake_word(text_lower)
             if not cmd_clean or len(cmd_clean) < 2:
-                log_info("В окне команды назван только триггер")
+                log_info("В окне команды повторно назван триггер")
                 self.on_command("триггер_активирован", raw_text)
                 return True
             log_info(f"Прямой ввод команды (без wake-word): '{cmd_clean}' (raw: '{raw_text}')")

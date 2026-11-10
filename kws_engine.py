@@ -218,9 +218,9 @@ class KWSEngine:
         if now - self.last_trigger_time < self.cooldown_sec:
             return None
 
-        # Быстрый RMS чек: если уровень сигнала слишком низкий (< -42 dB), пропускаем инференс
+        # Быстрый RMS чек: если уровень сигнала слишком низкий (< -40 dB), пропускаем инференс
         rms = np.sqrt(np.mean(audio_window_16k ** 2))
-        if rms < 0.008:
+        if rms < 0.010:
             return None
 
         mel = extract_mel_spectrogram(audio_window_16k)
