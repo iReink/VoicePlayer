@@ -229,6 +229,19 @@ class HybridNLU:
             log_debug(f"Fast-path сработал для '{clean_text}': {fast_result['action']}")
             return fast_result
 
+        # --- 1.5. ЛОКАЛЬНЫЙ CommandParser ДЛЯ ЯВНЫХ МУЗЫКАЛЬНЫХ КОМАНД ---
+        # Если в запросе есть явные музыкальные команды ("включи", "поставь", "сыграй"):
+        # парсим мгновенно локально, экономя 2-5 секунд облачного Gemini
+        local_parsed = CommandParser.parse(raw_text)
+        deterministic_actions = {
+            "PLAY_ARTIST", "PLAY_ALBUM", "PLAY_TRACK", "PLAY_PLAYLIST",
+            "PLAY_MY_PLAYLIST", "PLAY_EDITORIAL", "PLAY_LIKED", "PLAY_MY_WAVE",
+            "PAUSE", "RESUME", "NEXT", "PREV", "LIKE", "DISLIKE", "VOLUME_UP", "VOLUME_DOWN", "SET_VOLUME"
+        }
+        if local_parsed.get("action") in deterministic_actions:
+            log_info(f"Локальный CommandParser мгновенно распознал команду: {local_parsed['action']} ({local_parsed.get('query', '')})")
+            return local_parsed
+
         # --- 2. ОБЛАЧНЫЙ КАСКАД LLM (Gemini 3.5 -> 3.1) ---
         if self.api_key:
             for model_name in MODELS_CASCADE:
@@ -326,6 +339,65 @@ class HybridNLU:
         if clean_text in ["сменить голос", "выбрать голос", "другой голос", "меню голоса"]:
             return {"action": "OPEN_VOICE_MENU"}
 
+        # Что сейчас играет / Информация о треке
+        if clean_text in [
+            "что играет", "что сейчас играет", "какой трек", "назови трек", "текущий трек",
+            "кто поет", "кто это", "песня", "трек", "инфо", "информация о треке", "current"
+        ] or re.search(r'\b(?:что|кто)\s+(?:сейчас\s+)?(?:играет|поет)\b', clean_text):
+            return {"action": "CURRENT"}
+
+        # Очередь воспроизведения
+        if clean_text in [
+            "очередь", "список треков", "очередь треков", "список очереди", "что дальше", "что потом", "queue"
+        ] or re.search(r'\b(?:покажи|открой|какая)\s+очередь\b', clean_text):
+            return {"action": "QUEUE"}
+
+        # Моя волна
+        if clean_text in [
+            "моя волна", "включи волну", "запусти волну", "включи мою волну", "радио", "волна"
+        ] or re.search(r'\b(?:включи|запусти|поставь)\s+(?:мою\s+)?волну\b', clean_text):
+            return {"action": "PLAY_MY_WAVE", "tts_response": "Включаю Мою волну"}
+
+        # Любимые / Лайк
+        if clean_text in [
+            "лайк", "мне нравится", "в любимые", "добавь в любимые", "класс", "лайкни", "нравится", "like"
+        ] or re.search(r'\b(?:поставь|добавь\s+в)\s+лайк\w*\b', clean_text):
+            return {"action": "LIKE"}
+
+        # Дизлайк
+        if clean_text in [
+            "дизлайк", "не нравится", "удали из волны", "диз", "dislike"
+        ] or re.search(r'\b(?:поставь|добавь\s+в)\s+дизлайк\w*\b', clean_text):
+            return {"action": "DISLIKE"}
+
+        # Громкость: громче / тише
+        if clean_text in ["громче", "погромче", "прибавь", "прибавь звук", "сделай громче", "прибавь громкость", "louder"]:
+            return {"action": "VOLUME_UP"}
+
+        if clean_text in ["тише", "потише", "убавь", "убавь звук", "сделай тише", "убавь громкость", "quieter"]:
+            return {"action": "VOLUME_DOWN"}
+
+        # Громкость на конкретное значение (например, "громкость 50" или "звук на 70")
+        vol_match = re.search(r'\b(?:громкость|звук)\s+(?:на\s+)?(\d{1,3})\b', clean_text)
+        if vol_match:
+            try:
+                lvl = int(vol_match.group(1))
+                if 0 <= lvl <= 100:
+                    return {"action": "SET_VOLUME", "level": lvl}
+            except Exception:
+                pass
+
+        # Перемешивание и повтор
+        if clean_text in ["перемешай", "вперемешку", "случайный порядок", "шаффл", "shuffle"]:
+            return {"action": "SHUFFLE"}
+
+        if clean_text in ["повтор", "повторяй", "зацикли", "повтор трека", "repeat"]:
+            return {"action": "REPEAT"}
+
+        # Помощь
+        if clean_text in ["помощь", "справка", "команды", "что ты умеешь", "инструкция", "help"]:
+            return {"action": "HELP"}
+
         # Запрос триггера
         if re.search(r'\b(?:какой|скажи|напомни)\s+(?:сейчас\s+)?триг+ер\b', clean_text):
             return {"action": "GET_TRIGGER"}
@@ -360,7 +432,7 @@ class HybridNLU:
         }
 
         try:
-            resp = requests.post(url, json=payload, timeout=4.0)
+            resp = requests.post(url, json=payload, timeout=2.0)
             if resp.status_code == 200:
                 body = resp.json()
                 raw_json_str = body["candidates"][0]["content"]["parts"][0]["text"]
@@ -377,7 +449,12 @@ class HybridNLU:
                 return None
 
         except requests.Timeout:
-            log_warning(f"Таймаут обращения к {model_name} (>4.0с)")
+            log_warning(f"Таймаут обращения к {model_name} (>2.0с), модель переведена в cooldown")
+            self._mark_model_cooldown(model_name, seconds=120.0)
+            return None
+        except requests.RequestException as e:
+            log_warning(f"Сетевой сбой при обращении к {model_name} ({e}), модель переведена в cooldown")
+            self._mark_model_cooldown(model_name, seconds=60.0)
             return None
         except Exception as e:
             log_warning(f"Ошибка запроса к {model_name}: {e}")

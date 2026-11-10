@@ -192,6 +192,29 @@ def find_trigger_in_phrase(phrase: str, trigger: str) -> Tuple[bool, str]:
 
     return False, ""
 
+def get_wasapi_input_device() -> Optional[int]:
+    """Поиск индекса микрофона по умолчанию в подсистеме Windows WASAPI для минимальной задержки (~3 мс)"""
+    try:
+        host_apis = sd.query_hostapis()
+        wasapi_idx = next((i for i, api in enumerate(host_apis) if 'WASAPI' in api['name']), None)
+        if wasapi_idx is None:
+            return None
+        default_in = sd.query_devices(kind='input')
+        def_name = default_in['name'].strip()
+        # 1. Точное совпадение
+        for i, d in enumerate(sd.query_devices()):
+            if d['hostapi'] == wasapi_idx and d['max_input_channels'] > 0:
+                if d['name'].strip() == def_name:
+                    return i
+        # 2. Нестрогое совпадение
+        for i, d in enumerate(sd.query_devices()):
+            if d['hostapi'] == wasapi_idx and d['max_input_channels'] > 0:
+                if def_name in d['name'] or d['name'] in def_name:
+                    return i
+        return host_apis[wasapi_idx].get('default_input')
+    except Exception:
+        return None
+
 class VoiceListener:
     def __init__(
         self,
@@ -336,10 +359,21 @@ class VoiceListener:
                 continue
             try:
                 log_debug("Открытие аудиопотока микрофона...")
-                with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32', blocksize=block_size) as stream:
+                wasapi_device = get_wasapi_input_device()
+                if wasapi_device is not None:
+                    try:
+                        dev_name = sd.query_devices(wasapi_device)['name']
+                        log_info(f"Используется WASAPI микрофон: '{dev_name}' (индекс {wasapi_device}, ~3 мс задержка)")
+                    except Exception:
+                        log_info(f"Используется WASAPI микрофон (индекс {wasapi_device})")
+                else:
+                    log_info("Используется системный микрофон по умолчанию")
+
+                with sd.InputStream(samplerate=sample_rate, channels=1, dtype='float32', blocksize=block_size, device=wasapi_device) as stream:
                     # Кольцевой буфер KWS: 1.5 сек (25 блоков по 960 сэмплов)
                     ring_buffer_blocks = int(1.5 * sample_rate / block_size)
                     kws_ring_buffer = collections.deque(maxlen=ring_buffer_blocks)
+                    pre_roll_buffer = collections.deque(maxlen=5)  # 5 блоков по 60 мс = 300 мс pre-roll
                     blocks_since_kws = 0
                     is_kws_command = False
                     kws_trigger_name = None
@@ -372,11 +406,12 @@ class VoiceListener:
 
                         # Локальное эхоподавление (WebRTC APM AEC3)
                         block_flat = self.aec.process_mic_block(raw_block_flat)
+                        pre_roll_buffer.append(block_flat.copy())
 
                         # Проверка завершения фоновой сессии диагностики AEC
                         diag_result = self.aec.update_diagnostic_state()
                         if diag_result is not None:
-                            erle = diag_result.get("erle_db", 0.0)
+                            erle = diag_result.get("erle_db") or diag_result.get("metrics", {}).get("suppression_erle_db", 0.0)
                             manifest = diag_result.get("manifest_path", "")
                             log_info(f"Сессия диагностики AEC завершена: ERLE = {erle:.2f} dB, манифест: {manifest}")
                             if self.on_log:
@@ -385,15 +420,12 @@ class VoiceListener:
                         rms = float(np.sqrt(np.mean(block_flat**2)))
                         music_active = self.is_music_playing() if self.is_music_playing else False
 
-                        # Оценка вероятности речи нейросетью Silero VAD (потоковая, без порчи массива)
+                        # Оценка вероятности речи нейросетью Silero VAD (потоковая, на каждом блоке)
                         vad_prob = 0.0
                         if vad is not None:
-                            if rms > 0.005:
-                                try:
-                                    vad_prob, _ = vad.process_block(block_flat)
-                                except Exception:
-                                    vad_prob = 0.0
-                            else:
+                            try:
+                                vad_prob, _ = vad.process_block(block_flat)
+                            except Exception:
                                 vad_prob = 0.0
 
                         # Адаптация шумового фона для fallback
@@ -467,7 +499,7 @@ class VoiceListener:
                                 if is_voice:
                                     is_recording = True
                                     silence_blocks = 0
-                                    audio_buffer = [block_flat.copy()]
+                                    audio_buffer = list(pre_roll_buffer)
                                     log_debug(f"Начало речи (RMS={rms:.4f}, VAD={vad_prob:.3f})")
                                     self._notify_status("RECORDING")
                                     if self.on_speech_start:
@@ -480,7 +512,7 @@ class VoiceListener:
                             audio_buffer.append(block_flat.copy())
 
                             if vad is not None:
-                                is_voice = (vad_prob >= 0.20) or (rms >= 0.009)
+                                is_voice = (vad_prob >= 0.25) or (vad_prob >= 0.20 and rms >= 0.008)
                             else:
                                 is_voice = rms > max(0.010, noise_floor * 1.5)
 
@@ -546,7 +578,11 @@ class VoiceListener:
         if self.config.trigger and self.config.trigger not in triggers:
             triggers.append(self.config.trigger)
         trig_str = ", ".join(triggers)
-        return f"Голосовой ассистент Яндекс Музыки. Активационные слова: {trig_str}. Команды: включи, пауза, стоп, дальше, назад, громче, тише."
+        return (
+            f"Голосовой ассистент Яндекс Музыки. Активационные слова: {trig_str}. "
+            "Команды: включи, пауза, стоп, дальше, назад, громче, тише, "
+            "что сейчас играет, очередь, моя волна, лайк, дизлайк, помощь, отмена, смени голос."
+        )
 
     def _process_audio(
         self,
@@ -562,6 +598,7 @@ class VoiceListener:
         try:
             segments, _ = model.transcribe(
                 audio_data,
+                language="ru",
                 beam_size=3,
                 initial_prompt=initial_prompt,
                 condition_on_previous_text=False,

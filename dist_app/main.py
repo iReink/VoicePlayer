@@ -711,10 +711,10 @@ def main():
                 # Моя волна
                 elif action == "PLAY_MY_WAVE":
                     console.print("[bold cyan][Моя волна] Запускаем Мою волну...[/bold cyan]")
-                    tts_text = cmd.get("tts_response") or "Запускаю Мою волну"
-                    tts.say(tts_text, pause_music=False)
                     tracks = service.get_my_wave_batch()
                     if tracks:
+                        tts_text = cmd.get("tts_response") or "Запускаю Мою волну"
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=True, playlist_title="Моя волна")
                     else:
                         console.print("[red]Не удалось загрузить Мою волну[/red]")
@@ -727,7 +727,7 @@ def main():
                     tracks, desc = service.search_user_playlist(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю ваш плейлист {desc}"
-                        tts.say(tts_text, pause_music=False)
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -736,10 +736,10 @@ def main():
                 # Любимые треки
                 elif action == "PLAY_LIKED":
                     console.print("[bold red][Любимые] Загружаем любимые треки...[/bold red]")
-                    tts_text = cmd.get("tts_response") or "Включаю любимые треки"
-                    tts.say(tts_text, pause_music=False)
                     tracks, desc = service.get_liked_tracks()
                     if tracks:
+                        tts_text = cmd.get("tts_response") or "Включаю любимые треки"
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -749,10 +749,10 @@ def main():
                 elif action == "PLAY_EDITORIAL":
                     title = cmd["title"]
                     console.print(f"[bold green][Подборка] Загружаем '{title}'...[/bold green]")
-                    tts_text = cmd.get("tts_response") or f"Включаю {title}"
-                    tts.say(tts_text, pause_music=False)
                     tracks, desc = service.get_generated_playlist(cmd["kind"])
                     if tracks:
+                        tts_text = cmd.get("tts_response") or f"Включаю {title}"
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -765,7 +765,7 @@ def main():
                     tracks, desc = service.search_artist(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю исполнителя {q}"
-                        tts.say(tts_text, pause_music=False)
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -778,7 +778,7 @@ def main():
                     tracks, desc = service.search_album(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю альбом {q}"
-                        tts.say(tts_text, pause_music=False)
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -791,7 +791,7 @@ def main():
                     tracks, desc = service.search_playlist(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю плейлист {q}"
-                        tts.say(tts_text, pause_music=False)
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -804,7 +804,7 @@ def main():
                     tracks, desc = service.search_track(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю трек {q}"
-                        tts.say(tts_text, pause_music=False)
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")
@@ -817,7 +817,7 @@ def main():
                     tracks, desc = service.smart_search(q)
                     if tracks:
                         tts_text = cmd.get("tts_response") or f"Включаю {q}"
-                        tts.say(tts_text, pause_music=False)
+                        threading.Thread(target=tts.say, args=(tts_text, False), daemon=True).start()
                         player.play_tracks(tracks, is_my_wave=False, playlist_title=desc)
                     else:
                         console.print(f"[yellow]{desc}[/yellow]")

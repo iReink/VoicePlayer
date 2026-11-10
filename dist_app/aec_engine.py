@@ -91,6 +91,7 @@ class AECFrontend:
         self._diag_ref_far: list = []
         self._diag_clean_out: list = []
         self._diag_events: list = []
+        self._last_mic_call_time = 0.0
 
     def _init_processor(self):
         """Инициализация процессора WebRTC APM"""
@@ -205,21 +206,26 @@ class AECFrontend:
                 loop_mic = sc.get_microphone(spk.name, include_loopback=True)
                 log_info(f"[AEC] Подключен WASAPI Loopback для устройства: «{spk.name}»")
                 
-                # Захватываем блоками по 10 мс (160 сэмплов при 16 кГц)
-                with loop_mic.recorder(samplerate=self.sample_rate, channels=2, blocksize=self.frame_size) as rec:
+                # Захватываем блоками по 60 мс (960 сэмплов при 16 кГц) для стабильности буфера WASAPI
+                loopback_block_size = 960
+                with loop_mic.recorder(samplerate=self.sample_rate, channels=2, blocksize=loopback_block_size) as rec:
                     self._loopback_active = True
                     if self._enabled and self._processor is not None:
                         self._state = AECState.ACTIVE
 
                     while self._running:
-                        block = rec.record(self.frame_size)
+                        block = rec.record(loopback_block_size)
                         if block is None or len(block) == 0:
                             continue
 
                         # Сведение стерео-сигнала колонок в моно (L + R) / 2
                         mono = np.mean(block, axis=1, dtype=np.float32)
                         now = time.perf_counter()
-                        self._far_queue.append((now, mono))
+
+                        # Нарезаем 960-сэмпловый блок на 10-мс фреймы (по 160 сэмплов)
+                        for offset in range(0, len(mono) - self.frame_size + 1, self.frame_size):
+                            frame = mono[offset : offset + self.frame_size]
+                            self._far_queue.append((now, frame))
 
             except Exception as e:
                 self._loopback_active = False
@@ -236,6 +242,12 @@ class AECFrontend:
         """
         if not self._enabled or self._processor is None or self._state == AECState.BYPASS:
             return raw_mic_block
+
+        now = time.perf_counter()
+        if self._last_mic_call_time > 0 and (now - self._last_mic_call_time) > 0.15:
+            # Был простой (Whisper распознавал речь или говорил TTS) — сбрасываем устаревший опорный сигнал
+            self._far_queue.clear()
+        self._last_mic_call_time = now
 
         total_samples = len(raw_mic_block)
         if total_samples < self.frame_size:
@@ -342,6 +354,8 @@ class AECFrontend:
                 "stream_delay_ms": self.stream_delay_ms,
                 "speaker_device": self._device_name,
                 "duration_seconds": round(len(clean_arr) / self.sample_rate, 2),
+                "erle_db": round(erle_db, 2),
+                "manifest_path": str(json_manifest),
                 "metrics": {
                     "rms_raw_mic": round(rms_raw, 5),
                     "rms_loopback_ref": round(rms_ref, 5),

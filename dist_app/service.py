@@ -212,16 +212,41 @@ class MusicService:
             best_item = search_res.best.result
             
             if best_type == 'artist' and hasattr(best_item, 'name'):
+                try:
+                    popular = best_item.get_tracks()
+                    if popular and popular.tracks:
+                        return popular.tracks[:50], f"Популярные треки: {best_item.name} ({len(popular.tracks)} треков)"
+                except Exception:
+                    pass
                 tracks, desc = self.search_artist(best_item.name)
                 if tracks:
                     return tracks, desc
                     
             elif best_type == 'album' and hasattr(best_item, 'title'):
+                try:
+                    alb_tracks = []
+                    if hasattr(best_item, 'volumes') and best_item.volumes:
+                        for vol in best_item.volumes:
+                            alb_tracks.extend(vol)
+                    if alb_tracks:
+                        art_str = ", ".join([a.name for a in best_item.artists]) if hasattr(best_item, 'artists') and best_item.artists else ""
+                        return alb_tracks, f"Альбом: {art_str} — {best_item.title} ({len(alb_tracks)} треков)"
+                except Exception:
+                    pass
                 tracks, desc = self.search_album(best_item.title)
                 if tracks:
                     return tracks, desc
                     
             elif best_type == 'playlist' and hasattr(best_item, 'title'):
+                try:
+                    short_tracks = best_item.fetch_tracks()
+                    if short_tracks:
+                        track_ids = [t.id for t in short_tracks[:50]]
+                        full_tracks = self.client.tracks(track_ids)
+                        if full_tracks:
+                            return full_tracks, f"Плейлист: {best_item.title} ({len(full_tracks)} треков)"
+                except Exception:
+                    pass
                 tracks, desc = self.search_playlist(best_item.title)
                 if tracks:
                     return tracks, desc

@@ -327,9 +327,9 @@ class LiveSessionManager:
                 chunk_float = shorts.astype(np.float32) / 32768.0
                 rms = float(np.sqrt(np.mean(chunk_float**2)))
 
-                # Нейросетевая вероятность речи Silero VAD (потоковая, без порчи буфера)
+                # Нейросетевая вероятность речи Silero VAD (потоковая, на каждом блоке)
                 vad_prob = 0.0
-                if vad is not None and rms > 0.006:
+                if vad is not None:
                     try:
                         vad_prob, _ = vad.process_block(chunk_float)
                     except Exception:
